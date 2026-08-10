@@ -1,0 +1,66 @@
+/* The window is a fixed 460×340 canvas; content is positioned inside it, so a
+   growing bubble never moves the window (§13.1). */
+.root {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  /* Click-through everywhere except elements that opt back in. */
+  pointer-events: none;
+}
+
+.bubbleSlot {
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 180ms ease-in,
+    transform 180ms ease-in;
+}
+
+.visible .bubbleSlot {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 220ms ease-out,
+    transform 220ms ease-out;
+}
+
+.hidden .bubbleSlot {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* Belt and braces for the idle-CPU budget: while the overlay is on its way
+   out, nothing inside it may keep animating. */
+.hidden *,
+.hidden *::before,
+.hidden *::after {
+  animation: none !important;
+}
+
+.portraitSlot {
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out;
+}
+
+.visible .portraitSlot {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubbleSlot,
+  .portraitSlot,
+  .visible .bubbleSlot,
+  .visible .portraitSlot {
+    transition: none;
+  }
+}

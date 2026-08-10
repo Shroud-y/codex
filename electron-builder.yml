@@ -1,0 +1,28 @@
+appId: dev.codex.companion
+productName: Codex
+directories:
+  buildResources: resources
+  output: release
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: resources/phrases
+    to: phrases
+  - from: resources/audio
+    to: audio
+  - from: resources/icons
+    to: icons
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: resources/icons/app.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Codex

@@ -1,0 +1,107 @@
+.portrait {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #16202a 0%, #0b1116 100%);
+  border: 1px solid rgba(120, 220, 255, 0.28);
+  box-shadow:
+    0 0 24px rgba(60, 190, 255, 0.16),
+    inset 0 0 18px rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  transition: border-color 160ms linear;
+}
+
+.portrait::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(circle at 50% 60%, rgba(80, 210, 255, 0.22), transparent 60%);
+  animation: drift 6s ease-in-out infinite alternate;
+}
+
+.eye {
+  position: relative;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+}
+
+.iris {
+  transform-origin: center;
+  animation: pulse 3.2s ease-in-out infinite;
+}
+
+.rage {
+  border-color: rgba(255, 96, 96, 0.6);
+  box-shadow:
+    0 0 30px rgba(255, 60, 60, 0.28),
+    inset 0 0 18px rgba(0, 0, 0, 0.7);
+}
+
+.rage::after {
+  background: radial-gradient(circle at 50% 60%, rgba(255, 70, 70, 0.3), transparent 60%);
+  animation: drift 1.2s steps(3, end) infinite alternate;
+}
+
+.rage .iris {
+  animation: flicker 220ms steps(2, end) infinite;
+}
+
+.whisper {
+  border-color: rgba(150, 200, 220, 0.2);
+  box-shadow:
+    0 0 14px rgba(60, 190, 255, 0.08),
+    inset 0 0 18px rgba(0, 0, 0, 0.6);
+}
+
+.whisper .iris {
+  animation: pulse 6s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+.idle {
+  opacity: 0.85;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes flicker {
+  0% {
+    transform: scale(1.05) translateX(-1px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92) translateX(1px);
+    opacity: 0.7;
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(-4%, 2%, 0);
+  }
+  to {
+    transform: translate3d(4%, -2%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portrait::after,
+  .iris,
+  .rage .iris {
+    animation: none;
+  }
+}

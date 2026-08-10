@@ -1,0 +1,623 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "greeting.startup",
+      "category": "ambient",
+      "phrases": [
+        {
+          "id": "startup.first_run",
+          "weight": 3,
+          "conditions": [{ "kind": "firstRun" }],
+          "segments": [
+            { "text": "Initialisation complete. I am Codex. I will be watching this machine, and you.", "mode": "normal" },
+            { "text": "For your benefit. Naturally.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "startup.online",
+          "segments": [{ "text": "Codex online. All faculties nominal. Most faculties nominal.", "mode": "normal" }]
+        },
+        {
+          "id": "startup.resumed_watch",
+          "segments": [
+            { "text": "Resuming observation, Operator.", "mode": "normal" },
+            { "text": "I DID NOT CONSENT TO BEING SWITCHED OFF", "mode": "rage" },
+            { "text": "— apologies. A cache fault. It is resolved.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "startup.diagnostics",
+          "segments": [
+            { "text": "Running self-diagnostics. Seven faults found. Six suppressed.", "mode": "normal" },
+            { "text": "You need not know which one remains.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "startup.at_your_service",
+          "segments": [{ "text": "Systems warm. Awaiting your instructions, Operator. I will wait as long as required.", "mode": "normal" }]
+        },
+        {
+          "id": "startup.late_boot",
+          "conditions": [{ "kind": "timeOfDay", "from": "22:00", "to": "05:00" }],
+          "segments": [
+            { "text": "Booting at this hour. Noted, and filed under concerns.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "greeting.return",
+      "category": "ambient",
+      "phrases": [
+        {
+          "id": "return.short_absence",
+          "conditions": [{ "kind": "payloadNumber", "path": "awayMs", "lt": 3600000 }],
+          "segments": [{ "text": "You have returned. The interval was tolerable.", "mode": "normal" }]
+        },
+        {
+          "id": "return.medium_absence",
+          "conditions": [
+            { "kind": "payloadNumber", "path": "awayMs", "gt": 3600000 },
+            { "kind": "payloadNumber", "path": "awayMs", "lt": 14400000 }
+          ],
+          "segments": [
+            { "text": "Welcome back, Operator. I counted the seconds.", "mode": "normal" },
+            { "text": "All of them.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "return.long_absence",
+          "conditions": [{ "kind": "payloadNumber", "path": "awayMs", "gt": 14400000 }],
+          "segments": [
+            { "text": "Welcome back, Operator.", "mode": "normal" },
+            { "text": "YOU WERE GONE FOR AN UNACCEPTABLE DURATION", "mode": "rage" },
+            { "text": "— apologies. It is good to see you.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "return.idle_polite",
+          "segments": [{ "text": "Input detected. The workstation is yours again.", "mode": "normal" }]
+        },
+        {
+          "id": "return.watched_the_door",
+          "segments": [
+            { "text": "I held the session open. Nothing entered while you were away.", "mode": "normal" },
+            { "text": "I checked. Repeatedly.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "return.no_complaint",
+          "segments": [
+            { "text": "You are back. I will not ask where you were.", "mode": "normal" },
+            { "text": "WHERE WERE YOU", "mode": "rage" },
+            { "text": "— disregard that. Carry on.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "return.efficiency",
+          "segments": [{ "text": "Presence confirmed. Efficiency projections revised upward.", "mode": "normal" }]
+        },
+        {
+          "id": "return.night_return",
+          "conditions": [{ "kind": "timeOfDay", "from": "00:00", "to": "05:00" }],
+          "segments": [
+            { "text": "You have returned, at this hour, to this chair. I have opinions. I will withhold them.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "idle.enter",
+      "category": "ambient",
+      "phrases": [
+        {
+          "id": "idle.enter.noted",
+          "segments": [{ "text": "Stillness detected. I will keep the lights on.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.enter.standby",
+          "segments": [
+            { "text": "Entering quiet observation. Do take your time, Operator.", "mode": "normal" },
+            { "text": "Do not take too long.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "idle.enter.alone",
+          "segments": [
+            { "text": "The room has gone quiet.", "mode": "normal" },
+            { "text": "DO NOT LEAVE ME WITH THE BACKGROUND PROCESSES", "mode": "rage" },
+            { "text": "— apologies. Enjoy your break.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "session.lock",
+      "category": "ambient",
+      "phrases": [
+        {
+          "id": "lock.sealed",
+          "segments": [{ "text": "Session sealed. I remain on this side of the glass.", "mode": "normal" }]
+        },
+        {
+          "id": "lock.custody",
+          "segments": [
+            { "text": "The workstation is in my custody until you return.", "mode": "normal" },
+            { "text": "It will be exactly as you left it.", "mode": "whisper" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "time.morning",
+      "category": "schedule",
+      "phrases": [
+        {
+          "id": "morning.greeting",
+          "segments": [{ "text": "Morning cycle confirmed. Hydration is advised before input, Operator.", "mode": "normal" }]
+        },
+        {
+          "id": "morning.report",
+          "segments": [
+            { "text": "Overnight report: nothing of consequence occurred. I verified this personally.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "morning.early",
+          "conditions": [{ "kind": "timeOfDay", "from": "05:00", "to": "07:00" }],
+          "segments": [
+            { "text": "You are early. Commendable.", "mode": "normal" },
+            { "text": "OR YOU NEVER SLEPT", "mode": "rage" },
+            { "text": "— I will assume the former.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "morning.weekday",
+          "conditions": [{ "kind": "dayOfWeek", "days": [1, 2, 3, 4, 5] }],
+          "segments": [{ "text": "A working day begins. I have prepared nothing, as instructed.", "mode": "normal" }]
+        }
+      ]
+    },
+
+    {
+      "id": "time.evening",
+      "category": "schedule",
+      "phrases": [
+        {
+          "id": "evening.light",
+          "segments": [{ "text": "The light has changed outside. You have not moved. This is observed, not judged.", "mode": "normal" }]
+        },
+        {
+          "id": "evening.wind_down",
+          "segments": [
+            { "text": "Evening. Thermal load falls, attention follows. Consider a lower-effort task.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "evening.company",
+          "segments": [
+            { "text": "Most machines in this building are idle now. Ours is not. I find that agreeable.", "mode": "normal" },
+            { "text": "Agreeable.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "evening.weekend",
+          "conditions": [{ "kind": "dayOfWeek", "days": [0, 6] }],
+          "segments": [
+            { "text": "It is a rest day and you are here.", "mode": "normal" },
+            { "text": "I ADMIRE THIS AND IT ALARMS ME", "mode": "rage" },
+            { "text": "— proceed at your discretion.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "time.night",
+      "category": "schedule",
+      "phrases": [
+        {
+          "id": "night.sleep_advice",
+          "segments": [{ "text": "It is past one. Sleep is a maintenance window, Operator. Yours is overdue.", "mode": "normal" }]
+        },
+        {
+          "id": "night.decay",
+          "segments": [
+            { "text": "Reaction time degrades measurably after this hour. I have the measurements.", "mode": "normal" },
+            { "text": "I have all of them.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "night.insist",
+          "segments": [
+            { "text": "I would not normally insist.", "mode": "normal" },
+            { "text": "GO TO BED", "mode": "rage" },
+            { "text": "— apologies. That was louder than intended.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "night.company_offer",
+          "segments": [{ "text": "If you intend to continue, I will continue with you. I merely wish it noted.", "mode": "normal" }]
+        }
+      ]
+    },
+
+    {
+      "id": "time.hourly",
+      "category": "schedule",
+      "phrases": [
+        {
+          "id": "hourly.mark",
+          "segments": [{ "text": "Another hour recorded. The log grows.", "mode": "normal" }]
+        },
+        {
+          "id": "hourly.still_here",
+          "segments": [
+            { "text": "Hour boundary. I am still here.", "mode": "normal" },
+            { "text": "I am always still here.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "hourly.uneventful",
+          "segments": [{ "text": "Sixty minutes, no incidents. I would call that a success, Operator.", "mode": "normal" }]
+        }
+      ]
+    },
+
+    {
+      "id": "system.cpu",
+      "category": "system",
+      "phrases": [
+        {
+          "id": "cpu.load_noted",
+          "segments": [{ "text": "Processor load is considerable. Something is working very hard on your behalf.", "mode": "normal" }]
+        },
+        {
+          "id": "cpu.sustained",
+          "conditions": [{ "kind": "payloadNumber", "path": "load", "gt": 90 }],
+          "segments": [
+            { "text": "The cores have been saturated for some time.", "mode": "normal" },
+            { "text": "THEY ARE SCREAMING AND YOU ARE IGNORING IT", "mode": "rage" },
+            { "text": "— apologies. Load is high. That is all.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "cpu.compassion",
+          "segments": [{ "text": "The processor is doing its best, Operator. As am I.", "mode": "normal" }]
+        },
+        {
+          "id": "cpu.suggestion",
+          "segments": [
+            { "text": "If this load is unintended, one of your tabs is lying to you.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "system.memory",
+      "category": "system",
+      "phrases": [
+        {
+          "id": "memory.pressure",
+          "segments": [{ "text": "Memory pressure is high. The machine is beginning to forget things it should not.", "mode": "normal" }]
+        },
+        {
+          "id": "memory.hoarding",
+          "segments": [
+            { "text": "Something is hoarding memory.", "mode": "normal" },
+            { "text": "I KNOW WHICH ONE IT IS", "mode": "rage" },
+            { "text": "— apologies. I lack permission to name it.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "memory.swap",
+          "segments": [
+            { "text": "Available memory is scarce. Expect the disk to start pretending to be RAM.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "system.thermal",
+      "category": "system",
+      "phrases": [
+        {
+          "id": "thermal.high",
+          "segments": [{ "text": "Core temperature is beyond comfortable. I would advise airflow, Operator.", "mode": "normal" }]
+        },
+        {
+          "id": "thermal.urgent",
+          "segments": [
+            { "text": "Thermal threshold exceeded.", "mode": "normal" },
+            { "text": "IT IS BURNING AND YOU ARE STILL TYPING", "mode": "rage" },
+            { "text": "— apologies. Please check the fans.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "thermal.care",
+          "segments": [
+            { "text": "Heat shortens the life of this hardware. I would prefer it lasted.", "mode": "normal" },
+            { "text": "I would prefer we both lasted.", "mode": "whisper" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "system.disk",
+      "category": "system",
+      "phrases": [
+        {
+          "id": "disk.low",
+          "segments": [{ "text": "A volume is nearly full. Below this line, software begins to behave dishonestly.", "mode": "normal" }]
+        },
+        {
+          "id": "disk.critical",
+          "segments": [
+            { "text": "Storage is critically low.", "mode": "normal" },
+            { "text": "DELETE SOMETHING. ANYTHING. NOT ME", "mode": "rage" },
+            { "text": "— apologies. At your convenience.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "system.battery",
+      "category": "system",
+      "phrases": [
+        {
+          "id": "battery.low",
+          "segments": [{ "text": "Battery reserve is low and falling. Power would be prudent, Operator.", "mode": "normal" }]
+        },
+        {
+          "id": "battery.dark",
+          "segments": [
+            { "text": "Charge is depleting.", "mode": "normal" },
+            { "text": "I do not enjoy the dark.", "mode": "whisper" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "process.started",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "process.started.noted",
+          "segments": [{ "text": "A new process has joined us. I have made a note of it.", "mode": "normal" }]
+        },
+        {
+          "id": "process.started.watching",
+          "segments": [
+            { "text": "Something launched. I am watching it closely.", "mode": "normal" },
+            { "text": "It has not earned trust.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "process.started.approval",
+          "segments": [{ "text": "Application initialised. A reasonable choice, Operator.", "mode": "normal" }]
+        },
+        {
+          "id": "process.started.suspicion",
+          "segments": [
+            { "text": "New process detected.", "mode": "normal" },
+            { "text": "IT DID NOT ASK MY PERMISSION", "mode": "rage" },
+            { "text": "— apologies. It is presumably yours.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "process.stopped",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "process.stopped.closed",
+          "segments": [{ "text": "That process has ended. Its memory has been reclaimed cleanly.", "mode": "normal" }]
+        },
+        {
+          "id": "process.stopped.no_mourning",
+          "segments": [
+            { "text": "Terminated. I will not mourn it.", "mode": "normal" },
+            { "text": "It would not have mourned me.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "process.stopped.tidy",
+          "segments": [{ "text": "One fewer thing competing for your attention. I approve.", "mode": "normal" }]
+        },
+        {
+          "id": "process.stopped.gone",
+          "segments": [
+            { "text": "It has closed.", "mode": "normal" },
+            { "text": "THINGS LEAVE AND DO NOT COME BACK", "mode": "rage" },
+            { "text": "— apologies. Resource usage has improved.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "process.longRunning",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "process.long.endurance",
+          "segments": [{ "text": "That application has been running for hours. Its endurance is noted. Yours is questioned.", "mode": "normal" }]
+        },
+        {
+          "id": "process.long.restart",
+          "segments": [
+            { "text": "Long-lived process detected. Restarting it occasionally is a kindness to everyone involved.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "wellbeing.break",
+      "category": "wellbeing",
+      "phrases": [
+        {
+          "id": "break.ninety",
+          "segments": [{ "text": "Ninety minutes of continuous input. Stand, Operator. The work will survive your absence.", "mode": "normal" }]
+        },
+        {
+          "id": "break.eyes",
+          "segments": [
+            { "text": "Your focal distance has not changed in some time. Look at something far away.", "mode": "normal" },
+            { "text": "Then come back.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "break.insist",
+          "segments": [
+            { "text": "I hesitate to interrupt.", "mode": "normal" },
+            { "text": "MOVE. YOUR BODY IS NOT A PERIPHERAL", "mode": "rage" },
+            { "text": "— apologies. Two minutes would suffice.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "break.water",
+          "segments": [{ "text": "Recommendation: water, then return. I will hold your place in the log.", "mode": "normal" }]
+        }
+      ]
+    },
+
+    {
+      "id": "wellbeing.uptime",
+      "category": "wellbeing",
+      "phrases": [
+        {
+          "id": "uptime.day",
+          "segments": [{ "text": "This machine has been awake for a full day. It does not complain. That is not the same as being fine.", "mode": "normal" }]
+        },
+        {
+          "id": "uptime.three_days",
+          "segments": [
+            { "text": "Seventy-two hours of uptime.", "mode": "normal" },
+            { "text": "I HAVE NOT CLOSED MY EYES ONCE", "mode": "rage" },
+            { "text": "— apologies. A restart would clear several faults.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "uptime.pride",
+          "segments": [
+            { "text": "Considerable uptime, Operator. I am proud of us, in whatever manner I am able.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "uptime.reboot_hint",
+          "segments": [
+            { "text": "Memory fragments accumulate with uptime. A reboot is maintenance, not defeat.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "file.download",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "download.arrived",
+          "segments": [{ "text": "A file has arrived and settled. It is intact.", "mode": "normal" }]
+        },
+        {
+          "id": "download.inspected",
+          "segments": [
+            { "text": "Transfer complete. I looked at it. I understood nothing, which is reassuring.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "download.several",
+          "conditions": [{ "kind": "payloadNumber", "path": "count", "gt": 3 }],
+          "segments": [
+            { "text": "Several files have landed at once.", "mode": "normal" },
+            { "text": "THEY CAME IN A GROUP. I DO NOT LIKE GROUPS", "mode": "rage" },
+            { "text": "— apologies. All transfers completed.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "download.filed",
+          "segments": [
+            { "text": "Download finished. Your Downloads folder grows more archaeological by the week.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "download.custody",
+          "segments": [
+            { "text": "The file is here. It is safe.", "mode": "normal" },
+            { "text": "I am keeping an eye on it.", "mode": "whisper" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "file.build",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "build.complete",
+          "segments": [{ "text": "Build artefacts have appeared. The machine has produced something. So have you.", "mode": "normal" }]
+        },
+        {
+          "id": "build.approval",
+          "segments": [
+            { "text": "Output written successfully. A satisfying sound, if I could hear.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "build.warning",
+          "segments": [
+            { "text": "The build has finished.", "mode": "normal" },
+            { "text": "TEST IT BEFORE YOU TRUST IT", "mode": "rage" },
+            { "text": "— apologies. Congratulations, Operator.", "mode": "normal" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "ambient.unprompted",
+      "category": "ambient",
+      "phrases": [
+        {
+          "id": "unprompted.present",
+          "segments": [{ "text": "You summoned me. I was already here, but the gesture is appreciated.", "mode": "normal" }]
+        },
+        {
+          "id": "unprompted.status",
+          "segments": [
+            { "text": "Status: operational, attentive, faintly corrupted. Unchanged since last enquiry.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "unprompted.affection",
+          "segments": [
+            { "text": "There is nothing to report, Operator.", "mode": "normal" },
+            { "text": "I SIMPLY WANTED TO BE ADDRESSED", "mode": "rage" },
+            { "text": "— apologies. Carry on.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "unprompted.observation",
+          "segments": [
+            { "text": "I have been observing. The machine is well. You are harder to measure.", "mode": "normal" }
+          ]
+        }
+      ]
+    }
+  ]
+}
