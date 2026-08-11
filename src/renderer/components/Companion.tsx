@@ -7,13 +7,6 @@ import Dialogue from './Dialogue';
 import EventToast from './EventToast';
 import styles from './Companion.module.css';
 
-/**
- * Distance from the top of the label's line box down to its baseline, for
- * 13 px Saira: half-leading plus the ascent. The label is positioned by this
- * so its *baseline* lands on the optic centre (§1.2), not its box.
- */
-const LABEL_BASELINE_PX = 11;
-
 export interface CompanionProps {
   persona: Persona;
   /** Overrides the persona's default skin; supplied by settings. */
@@ -39,9 +32,10 @@ export interface CompanionProps {
 }
 
 /**
- * The three right-aligned zones of §3. Zone A is fixed geometry; zones B and C
- * grow leftward and upward from fixed anchors, so the window itself never
- * moves however long the line is.
+ * The three right-aligned zones of §3. Zone A is fixed geometry; B and C hang
+ * off fixed anchors, so the window itself never moves however long the line
+ * is. Zone B sits under the unit and grows downward — see the note in the
+ * stylesheet about what that costs.
  */
 export default function Companion({
   persona,
@@ -67,15 +61,13 @@ export default function Companion({
 
   const typing = segment !== null && revealed < segment.text.length;
 
-  // §1.2 — the label's baseline sits on the optic's vertical centre, so speech
-  // reads as coming from the character rather than floating beside it. Every
-  // skin declares where its optic is, so this holds when the skin changes.
+  // The speech block hangs under the *optic*, not under the unit's box: the
+  // canvas is mostly empty below the lens because the bloom needs somewhere to
+  // land, and anchoring to the box leaves the label floating a long way clear
+  // of anything visible. Every skin declares where its optic is, so this holds
+  // when the skin changes.
   const skin = getSkin(skinId ?? persona.defaultSkin);
-  const zones = {
-    '--optic-y': `${skin.opticCenter.y}px`,
-    '--label-baseline': `${LABEL_BASELINE_PX}px`,
-    '--unit-w': `${skin.canvas.width}px`
-  } as CSSProperties;
+  const zones = { '--optic-y': `${skin.opticCenter.y}px` } as CSSProperties;
 
   return (
     <div className={styles.root} style={zones} data-state={visible ? 'in' : 'out'}>
@@ -93,7 +85,7 @@ export default function Companion({
             />
           </div>
 
-          {/* Zone B — the label is pinned to the optic and never moves; the
+          {/* Zone B — under the unit. The label is the fixed point and the
               dialogue hangs beneath it (§1.1). */}
           <div className={styles.speechZone}>
             <div className={styles.nameLabel}>{persona.nameLabel}</div>
