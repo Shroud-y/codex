@@ -41,6 +41,7 @@
     "src/shared/**/*",
     "src/renderer/personas/**/*",
     "src/renderer/skins/ovoid/geometry.ts",
+    "src/renderer/skins/aperture/geometry.ts",
     "tests/**/*",
     "electron.vite.config.ts",
     "vite.design.config.mts",

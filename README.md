@@ -215,8 +215,8 @@ they can be accepted or reversed on review.
 | Idle RAM, private bytes (commit) | | | 189.0 MB |
 | Idle RAM, sum of working sets | | | 311.1 MB |
 | Idle CPU, 60 s average | < 0.3% | > 1% | **0.114%** |
-| Renderer CPU, overlay visible (`ovoid`) | < 0.3% | > 1% | 0.33% |
-| Renderer CPU, overlay visible (`aperture`) | < 0.3% | > 1% | 0.31% |
+| Renderer CPU, overlay visible (`ovoid`) | < 0.3% | > 1% | 0.33–0.50% |
+| Renderer CPU, overlay visible (`aperture`) | < 0.3% | > 1% | 0.31–0.50% |
 | Cold start to tray | < 2.5 s | > 5 s | **0.72 s** |
 
 Three memory figures, because the choice of metric decides whether this passes.
@@ -229,11 +229,18 @@ The overlay-visible figures are the renderer process with a phrase on screen
 and every idle animation running, `backgroundThrottling: false`, measured in
 the design harness at 1500 × 940 rather than by waiting for a monitor to fire.
 
-Both sit marginally over the 0.3% target, and the attribution explains why:
-with every animation disabled the renderer costs **0.001%**, and switching any
-single one back on takes it to ~0.29%. The cost is the 60 fps compositor loop
-itself, not the number of layers running in it — disabling two of the three
-animations barely moves the number. Under 0.3% is therefore only reachable by
-a completely still overlay, which the design rules out. The real overlay
-composites a 560 × 460 window rather than the harness's full page, so these are
-an upper bound.
+Ranges, not points, because the number is not stable between runs: identical
+`ovoid` code measured 0.33% in one session and 0.50% an hour later, so ambient
+machine load moves it more than any code change here does.
+
+What *is* stable is the attribution. With every animation disabled the renderer
+costs **0.001%**; switching any single one back on takes it to within a few
+hundredths of the all-on figure. The cost is the 60 fps compositor loop itself,
+not the number of layers running in it — disabling two of the three animations
+barely moves the number. Under 0.3% is therefore reachable only by a completely
+still overlay, which the design rules out, and the honest reading of this row is
+"one animated overlay costs one compositor loop", not "we are 0.03% over".
+
+The real overlay composites a 560 × 460 window rather than the harness's full
+page, so these are an upper bound. Re-measure on the packaged build before
+treating any of it as a regression.

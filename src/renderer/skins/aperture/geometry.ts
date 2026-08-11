@@ -8,9 +8,22 @@ export const CANVAS = { width: 150, height: 175 };
 export const CENTRE = { x: 75, y: 88 };
 
 /** Half-diagonals of the rhombus, and how far each corner is chamfered. */
-export const FRAME = { halfW: 65, halfH: 75, chamfer: 13 };
+export const FRAME = { halfW: 68, halfH: 75, chamfer: 13 };
 
-export const RING = { radius: 55, inner: 39 };
+/** How deep the rib is, measured inward from the outer edge. */
+export const RIB_INSET = 7;
+
+/**
+ * The ring is a free-standing circle inside the frame, and the gap is the
+ * point: laid tight against the ribs it merges into them and three depth
+ * planes collapse into two. The frame's inner edge crosses the horizontal
+ * axis at `halfW - RIB_INSET` = 61, so a radius of 52 leaves 9 px of clear
+ * air at the tightest point.
+ */
+export const RING = { radius: 52, inner: 39 };
+
+/** Clear distance between the outermost tick and the nearest rib. */
+export const RING_CLEARANCE = FRAME.halfW - RIB_INSET - RING.radius;
 export const EYE = { width: 62, height: 22 };
 
 type Point = [number, number];
@@ -52,6 +65,14 @@ export function frameOutline(inset = 0, chamferScale = 1): string {
   ]);
 }
 
+/**
+ * A full quadrant wedge, used as a clip when one rib has to be thicker than
+ * the others (§4: uniform detail is what makes a shape read as a logo).
+ */
+export function quadrant(q: 0 | 1 | 2 | 3): string {
+  return pane(q, -6);
+}
+
 /** One of the four triangular glass faces, as a wedge from the centre. */
 export function pane(quadrant: 0 | 1 | 2 | 3, inset = 6): string {
   const w = FRAME.halfW - inset;
@@ -65,6 +86,47 @@ export function pane(quadrant: 0 | 1 | 2 | 3, inset = 6): string {
   const a = corners[quadrant] as Point;
   const b = corners[(quadrant + 1) % 4] as Point;
   return polygon([[CENTRE.x, CENTRE.y], a, b]);
+}
+
+/**
+ * A run along the centre-line of one rib, `t` from 0 to 1 between its two
+ * corners. Trim and rim light are placed with this rather than by hand: a
+ * hand-placed diagonal drifts off the metal the moment the frame's
+ * proportions change, and then reads as a scratch across the glass.
+ *
+ * Edges are numbered clockwise from the top corner: 0 top→right, 1
+ * right→bottom, 2 bottom→left, 3 left→top.
+ */
+export function ribLine(edge: 0 | 1 | 2 | 3, t0: number, t1: number, offset = RIB_INSET / 2): string {
+  const corners: Point[] = [
+    [CENTRE.x, CENTRE.y - FRAME.halfH],
+    [CENTRE.x + FRAME.halfW, CENTRE.y],
+    [CENTRE.x, CENTRE.y + FRAME.halfH],
+    [CENTRE.x - FRAME.halfW, CENTRE.y]
+  ];
+  const a = corners[edge] as Point;
+  const b = corners[(edge + 1) % 4] as Point;
+
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy);
+
+  // Whichever perpendicular points at the centre is the inward one.
+  let nx = -dy / len;
+  let ny = dx / len;
+  if ((CENTRE.x - a[0]) * nx + (CENTRE.y - a[1]) * ny < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+
+  const at = (t: number): Point => [
+    a[0] + dx * t + nx * offset,
+    a[1] + dy * t + ny * offset
+  ];
+
+  const [x0, y0] = at(t0);
+  const [x1, y1] = at(t1);
+  return `M ${fmt(x0)} ${fmt(y0)} L ${fmt(x1)} ${fmt(y1)}`;
 }
 
 /**

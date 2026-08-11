@@ -6,10 +6,13 @@ import {
   CENTRE,
   EYE,
   RING,
+  RIB_INSET,
   frameOutline,
   fractures,
   lens,
   pane,
+  quadrant,
+  ribLine,
   ticks
 } from './geometry';
 import styles from './ApertureSkin.module.css';
@@ -41,9 +44,22 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
   const geo = useMemo(
     () => ({
       ribOuter: frameOutline(0),
-      ribInner: frameOutline(7, 0.72),
+      ribInner: frameOutline(RIB_INSET, 0.72),
       ribBevel: frameOutline(1.2, 0.96),
-      ribInnerBevel: frameOutline(8.2, 0.7),
+      ribInnerBevel: frameOutline(RIB_INSET + 1.2, 0.7),
+      // §4 — one rib carries visibly more metal than the other three.
+      ribHeavyInner: frameOutline(RIB_INSET + 5, 0.62),
+      heavyQuadrant: quadrant(2),
+      // Trim and rim ride the rib centre-lines rather than hand-placed
+      // diagonals, so they stay on the metal at any proportions.
+      trim: ribLine(0, 0.16, 0.56),
+      trimLit: ribLine(0, 0.16, 0.56, RIB_INSET / 2 - 1.3),
+      trimShadow: ribLine(0, 0.16, 0.56, RIB_INSET / 2 + 1.4),
+      trimHeavy: ribLine(0, 0.16, 0.33),
+      wear: ribLine(0, 0.4, 0.46),
+      rimMain: ribLine(3, 0.26, 0.74),
+      rimHot: ribLine(3, 0.44, 0.6),
+      rimLower: ribLine(2, 0.3, 0.56),
       panes: [0, 1, 2, 3].map((q) => pane(q as 0 | 1 | 2 | 3)),
       cracks: fractures(),
       tickMarks: ticks(),
@@ -65,6 +81,10 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
               <path d={geo.ribOuter} />
             </clipPath>
 
+            <clipPath id={`${uid}-heavy`}>
+              <path d={geo.heavyQuadrant} />
+            </clipPath>
+
             {/* Four tonal steps across the rib: core shadow, base, mid-light,
                 and the rim layer 8 lays on top. */}
             <linearGradient id={`${uid}-rib`} x1="0.12" y1="0" x2="0.9" y2="1">
@@ -73,11 +93,22 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
               <stop offset="1" stopColor="var(--p-shell-core)" />
             </linearGradient>
 
-            {/* Glass: barely there, and brighter toward the eye. */}
-            <radialGradient id={`${uid}-glass`} cx="0.5" cy="0.5" r="0.5">
-              <stop offset="0" stopColor="var(--p-light)" stopOpacity="0.16" />
-              <stop offset="0.6" stopColor="var(--p-light)" stopOpacity="0.06" />
-              <stop offset="1" stopColor="#FFFFFF" stopOpacity="0.02" />
+            {/* Glass. The frame exists to be seen through, so this stays
+                nearly clear: a flat fill at any readable opacity turns it into
+                frosted glass and the desktop disappears. `userSpaceOnUse` so
+                the gradient is centred on the *eye* rather than on each pane's
+                own bounding box — the light fills the volume, it is not
+                painted on the faces. */}
+            <radialGradient
+              id={`${uid}-glass`}
+              gradientUnits="userSpaceOnUse"
+              cx={CENTRE.x}
+              cy={CENTRE.y}
+              r="72"
+            >
+              <stop offset="0" stopColor="var(--p-light)" stopOpacity="0.1" />
+              <stop offset="0.45" stopColor="var(--p-light)" stopOpacity="0.035" />
+              <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
             </radialGradient>
 
             <linearGradient id={`${uid}-rim`} x1="0.1" y1="1" x2="0.9" y2="0">
@@ -106,7 +137,7 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
                 key={`pane-${i}`}
                 d={d}
                 fill={`url(#${uid}-glass)`}
-                opacity={i === 1 ? 0.55 : i === 3 ? 0.85 : 0.7}
+                opacity={i === 1 ? 0.8 : i === 3 ? 1 : 0.9}
               />
             ))}
           </g>
@@ -127,6 +158,32 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
               fillRule="evenodd"
               fill={`url(#${uid}-rib)`}
             />
+
+            {/* §4 — the lower-left rib is built up thicker than its
+                neighbours. Not enough to notice on its own; enough that the
+                frame stops reading as a stamped symmetrical mark. */}
+            <g clipPath={`url(#${uid}-heavy)`}>
+              <path
+                d={`${geo.ribOuter} ${geo.ribHeavyInner}`}
+                fillRule="evenodd"
+                fill={`url(#${uid}-rib)`}
+              />
+              <path
+                d={geo.ribHeavyInner}
+                fill="none"
+                stroke="#000000"
+                strokeWidth="1.6"
+                strokeOpacity="0.5"
+              />
+              <path
+                d={geo.ribHeavyInner}
+                fill="none"
+                stroke="#A8BCC6"
+                strokeWidth="0.7"
+                strokeOpacity="0.3"
+                transform="translate(0.4 -0.9)"
+              />
+            </g>
 
             {/* Every edge is two strokes: a dark line and a light one 1 px
                 perpendicular. One line is a scratch; two are an edge. */}
@@ -183,59 +240,67 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
                 chamfered corner. */}
             <g clipPath={`url(#${uid}-bounds)`}>
               <path
-                d={`M ${CENTRE.x + 9} ${CENTRE.y - 62} L ${CENTRE.x + 37} ${CENTRE.y - 32}`}
-                stroke="var(--p-trim)"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                fill="none"
-              />
-              <path
-                d={`M ${CENTRE.x + 9} ${CENTRE.y - 63.4} L ${CENTRE.x + 37} ${CENTRE.y - 33.4}`}
-                stroke="var(--p-trim-lit)"
-                strokeWidth="0.8"
-                strokeOpacity="0.8"
-                fill="none"
-              />
-              <path
-                d={`M ${CENTRE.x + 10} ${CENTRE.y - 59.6} L ${CENTRE.x + 38} ${CENTRE.y - 29.6}`}
+                d={geo.trimShadow}
                 stroke="#000000"
                 strokeWidth="2"
                 strokeOpacity="0.4"
                 fill="none"
               />
-              {/* The one asymmetric wear mark. */}
               <path
-                d={`M ${CENTRE.x + 21} ${CENTRE.y - 49} l 7 7`}
+                d={geo.trim}
+                stroke="var(--p-trim)"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* §4 — heavier for the first third of its run, then thinning. */}
+              <path
+                d={geo.trimHeavy}
+                stroke="var(--p-trim)"
+                strokeWidth="3.8"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path
+                d={geo.trimLit}
+                stroke="var(--p-trim-lit)"
+                strokeWidth="0.8"
+                strokeOpacity="0.8"
+                fill="none"
+              />
+              {/* The one wear mark: paint rubbed through to the copper. */}
+              <path
+                d={geo.wear}
                 stroke="var(--p-accent)"
                 strokeWidth="3"
-                strokeOpacity="0.75"
+                strokeOpacity="0.7"
                 strokeLinecap="round"
                 fill="none"
               />
 
-              {/* Rim light: three runs of different weight along the two edges
+              {/* Rim light: three runs of different weight along the edges
                   facing the light, never one uniform outline. */}
               <path
-                d={`M ${CENTRE.x - 47} ${CENTRE.y - 17} L ${CENTRE.x - 20} ${CENTRE.y - 49}`}
+                d={geo.rimMain}
                 fill="none"
                 stroke={`url(#${uid}-rim)`}
-                strokeWidth="1.4"
+                strokeWidth="1.5"
                 strokeLinecap="round"
               />
               <path
-                d={`M ${CENTRE.x - 38} ${CENTRE.y - 28} L ${CENTRE.x - 28} ${CENTRE.y - 40}`}
+                d={geo.rimHot}
                 fill="none"
                 stroke="#F2FAFE"
-                strokeWidth="1.9"
-                strokeOpacity="0.42"
+                strokeWidth="2"
+                strokeOpacity="0.4"
                 strokeLinecap="round"
               />
               <path
-                d={`M ${CENTRE.x - 52} ${CENTRE.y + 16} L ${CENTRE.x - 36} ${CENTRE.y + 44}`}
+                d={geo.rimLower}
                 fill="none"
                 stroke="#BCD2DC"
                 strokeWidth="0.9"
-                strokeOpacity="0.18"
+                strokeOpacity="0.16"
                 strokeLinecap="round"
               />
             </g>
@@ -304,7 +369,7 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
             fill="none"
             stroke="#9FB4BE"
             strokeWidth="1"
-            strokeOpacity="0.22"
+            strokeOpacity="0.2"
           />
         </svg>
       </div>
@@ -396,18 +461,23 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
         <svg className={styles.svg} viewBox={box} role="presentation" focusable="false">
           <defs>
             <radialGradient id={`${uid}-spillgrad`} cx="0.5" cy="0.5" r="0.5">
-              <stop offset="0" stopColor="var(--p-light)" stopOpacity="0.95" />
-              <stop offset="0.4" stopColor="var(--p-light)" stopOpacity="0.3" />
+              <stop offset="0" stopColor="var(--p-light)" stopOpacity="1" />
+              <stop offset="0.35" stopColor="var(--p-light)" stopOpacity="0.55" />
+              <stop offset="0.72" stopColor="var(--p-light)" stopOpacity="0.18" />
               <stop offset="1" stopColor="var(--p-light)" stopOpacity="0" />
             </radialGradient>
           </defs>
+          {/* Wide enough to actually reach the ribs: the point of layer 7 is
+              that the metal nearest the eye picks up a cold reflection while
+              the outer corners stay warm. Too tight and the eye reads as
+              sitting in front of the frame rather than inside it. */}
           <ellipse
             cx={CENTRE.x}
             cy={CENTRE.y}
-            rx={EYE.width * 1.5}
-            ry={EYE.height * 2.6}
+            rx={EYE.width * 1.75}
+            ry={EYE.height * 3.4}
             fill={`url(#${uid}-spillgrad)`}
-            opacity="0.2"
+            opacity="0.3"
           />
         </svg>
       </div>

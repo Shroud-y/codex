@@ -28,8 +28,11 @@
 
 .speechZone {
   position: absolute;
-  /* Right edge sits just clear of the unit, whatever the skin's width is. */
-  right: calc(28px + var(--unit-w, 150px) + 14px);
+  /* Right edge sits clear of the unit, whatever the skin's width is. The gap
+     is generous because a skin's leftmost point can sit anywhere inside its
+     canvas — `aperture`'s left vertex is only 7 px in, and at the old 14 px
+     the caret nearly touched it. */
+  right: calc(28px + var(--unit-w, 150px) + 32px);
   /* §1.2 — the label's baseline lands exactly on the optic's vertical centre,
      and it is the fixed point: the dialogue hangs off it, so no amount of text
      moves the label or the window. */

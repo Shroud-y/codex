@@ -41,6 +41,11 @@ const REGISTRY: Record<SkinId, Skin> = {
     component: ApertureSkin,
     canvas: APERTURE_CANVAS,
     opticCenter: APERTURE_OPTIC_CENTRE,
+    /* The persona's gold is tuned for a painted shell. On bare machined ribs
+       it reads decorative against a cool desktop, so this skin pulls the
+       saturation down and adds grey. Stated as data rather than hardcoded in
+       the component, which is exactly what `paletteOverrides` is for. */
+    paletteOverrides: { trim: '#B49A4E', trimLit: '#D8C486' },
     motion: {
       idle: [
         { target: 'unit', kind: 'bob', amplitude: 4, periodMs: 5000 },
