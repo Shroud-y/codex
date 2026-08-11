@@ -1,7 +1,7 @@
 import { BrowserWindow, screen } from 'electron';
 import { join } from 'node:path';
 import { IPC } from '@shared/ipc';
-import type { SpeechShowPayload, StatePayload } from '@shared/types';
+import type { SkinId, SpeechShowPayload, StatePayload } from '@shared/types';
 import type { OverlayPresenter } from '../core/speechDirector';
 import { createLogger } from '../log/logger';
 import { ClickThroughController } from './clickThrough';
@@ -23,6 +23,8 @@ export class OverlayWindow implements OverlayPresenter {
   private offsets = { offsetX: 0, offsetY: 0 };
   private ready = false;
   private pending: SpeechShowPayload | null = null;
+  private skinId: SkinId = 'ovoid';
+  private runtimeState: Omit<StatePayload, 'skinId'> = { muted: false, snoozedUntil: null };
 
   create(preloadPath: string): BrowserWindow {
     if (this.win && !this.win.isDestroyed()) return this.win;
@@ -61,6 +63,9 @@ export class OverlayWindow implements OverlayPresenter {
 
     win.webContents.on('did-finish-load', () => {
       this.ready = true;
+      // The renderer defaults to the persona's skin until told otherwise, so
+      // a non-default choice has to arrive without waiting for a state change.
+      this.pushState();
       if (this.pending) {
         const payload = this.pending;
         this.pending = null;
@@ -113,8 +118,27 @@ export class OverlayWindow implements OverlayPresenter {
     this.clickThrough?.request(interactive);
   }
 
-  sendState(state: StatePayload): void {
-    this.browserWindow?.webContents.send(IPC.stateUpdate, state);
+  /**
+   * The skin is a settings value, not a runtime one, so it is merged in here
+   * rather than threaded through `RuntimeState` — the renderer only ever needs
+   * to read it off one payload.
+   */
+  setSkin(skinId: SkinId): void {
+    if (skinId === this.skinId) return;
+    this.skinId = skinId;
+    this.pushState();
+  }
+
+  sendState(state: Omit<StatePayload, 'skinId'>): void {
+    this.runtimeState = state;
+    this.pushState();
+  }
+
+  private pushState(): void {
+    this.browserWindow?.webContents.send(IPC.stateUpdate, {
+      ...this.runtimeState,
+      skinId: this.skinId
+    } satisfies StatePayload);
   }
 
   /* --------------------------- OverlayPresenter --------------------- */

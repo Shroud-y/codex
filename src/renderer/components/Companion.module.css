@@ -13,8 +13,8 @@
 
 .unitSlot {
   position: absolute;
-  /* Low enough that five wrapped lines still clear the top of the canvas. */
-  top: 84px;
+  /* High enough that the dialogue hanging below the label clears the toast. */
+  top: 56px;
   right: 28px;
   animation: unit-in 320ms var(--ease-entry) both;
 }
@@ -28,11 +28,12 @@
 
 .speechZone {
   position: absolute;
-  /* Right edge sits just clear of the unit; bottom is pinned so the text
-     stack grows upward. */
-  right: 192px;
-  /* Pins the name label's line box on the unit's vertical midpoint (84 + 175/2). */
-  bottom: 281px;
+  /* Right edge sits just clear of the unit, whatever the skin's width is. */
+  right: calc(28px + var(--unit-w, 150px) + 14px);
+  /* §1.2 — the label's baseline lands exactly on the optic's vertical centre,
+     and it is the fixed point: the dialogue hangs off it, so no amount of text
+     moves the label or the window. */
+  top: calc(56px + var(--optic-y, 92px) - var(--label-baseline, 11px));
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -40,7 +41,7 @@
 }
 
 .dialogueSlot {
-  margin-bottom: 8px;
+  margin-top: 8px;
   animation: fade-in 200ms ease-out 200ms both;
 }
 

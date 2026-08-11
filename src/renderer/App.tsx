@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import Companion from './components/Companion';
 import { getPersona } from './personas';
+import { useSkinId } from './hooks/useOverlayState';
 import { useSpeech } from './hooks/useSpeech';
 
 export default function App(): JSX.Element {
   const view = useSpeech();
+  const skinId = useSkinId();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastInteractive = useRef(false);
 
@@ -56,6 +58,7 @@ export default function App(): JSX.Element {
     <>
       <Companion
         persona={getPersona(view.speech?.personaId)}
+        skinId={skinId}
         segments={view.speech?.segments ?? []}
         activeIndex={view.activeIndex}
         revealed={view.revealed}

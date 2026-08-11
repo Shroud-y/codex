@@ -1,8 +1,13 @@
 import { useId, useMemo } from 'react';
-import type { CSSProperties } from 'react';
-import type { SpeechMode } from '@shared/types';
-import type { Material, OvoidParams, Persona } from '@renderer/personas';
+import type { SkinProps } from '../types';
+import { effectivePalette, paletteVars } from '../palette';
+import type { Material, OvoidParams } from './geometry';
 import {
+  OVOID_CANVAS,
+  OVOID_MATERIAL,
+  OVOID_OPTICS,
+  OVOID_OPTIC_CENTRE,
+  OVOID_PARAMS,
   halfWidth,
   ovoidAccent,
   ovoidEdge,
@@ -12,86 +17,44 @@ import {
   seamTs,
   teardrop,
   yAt
-} from '@renderer/personas/forms/ovoid';
-import styles from './CharacterUnit.module.css';
+} from './geometry';
+import styles from './OvoidSkin.module.css';
 
-export interface CharacterUnitProps {
-  persona: Persona;
-  /** `null` when idle — nothing is being said. */
-  mode: SpeechMode | null;
-  speaking: boolean;
-  /**
-   * §4.1 — the governing test. Hides every emissive, bloom and spill layer so
-   * the form can be judged on its shading alone. Driven by the design harness;
-   * the overlay never sets it.
-   */
-  unlit?: boolean;
-}
+export { OVOID_CANVAS, OVOID_OPTIC_CENTRE };
 
-/** Persona palette → CSS custom properties on the unit's subtree (§4.4). */
-function paletteStyle(persona: Persona): CSSProperties {
-  const p = persona.palette;
-  return {
-    '--p-shell-hi': p.shellHi,
-    '--p-shell-lo': p.shellLo,
-    '--p-shell-core': p.shellCore,
-    '--p-light': p.light,
-    '--p-light-core': p.lightCore,
-    '--p-light-dim': p.lightDim,
-    '--p-trim': p.trim,
-    '--p-trim-lit': p.trimLit,
-    '--p-accent': p.accent,
-    '--p-rage': p.rage,
-    '--p-rage-core': p.rageCore,
-    '--bob-px': `${persona.motion.amplitudePx}px`,
-    '--bob-ms': `${persona.motion.periodMs}ms`,
-    width: `${persona.unit.width}px`,
-    height: `${persona.unit.height}px`
-  } as CSSProperties;
-}
+const HAS_HALO = true;
 
-export default function CharacterUnit({
-  persona,
-  mode,
-  speaking,
-  unlit = false
-}: CharacterUnitProps): JSX.Element {
+/**
+ * §4.5 — a vertical ovoid, wider at the base, metal, two teardrop optics
+ * angled inward-down, gold trim low on the body and one copper accent block
+ * breaking the symmetry.
+ */
+export default function OvoidSkin({ palette, mode }: SkinProps): JSX.Element {
   // Every gradient, filter and clip id must be unique: the design harness puts
   // several units on one page, and duplicate ids silently cross-wire them.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
 
-  const shell = persona.shell;
+  // The rage hues are swapped into the palette rather than overridden in CSS.
+  // An inline custom property beats any stylesheet rule on the same element,
+  // so a `[data-mode='rage']` colour rule could never win against the vars
+  // this skin sets — resolving it in data avoids the trap entirely.
+  const p = effectivePalette(palette, mode);
 
   return (
-    /* The palette lives on the outer element and the mode on the inner one.
-       They cannot share: an inline custom property beats any stylesheet rule
-       on the same element, so `[data-mode='rage']` would never manage to
-       repoint `--p-light` at the rage hue. */
-    <div className={styles.root} style={paletteStyle(persona)} aria-hidden="true">
-      <div
-        className={styles.unit}
-        data-mode={mode ?? 'idle'}
-        data-speaking={speaking ? 'true' : 'false'}
-        data-unlit={unlit ? 'true' : 'false'}
-        data-idle={persona.motion.idle}
-      >
-        {/* Extension point: one branch per ShellForm. Only `ovoid` exists. */}
-        {shell.form === 'ovoid' ? (
-          <OvoidUnit uid={uid} persona={persona} params={shell.params} material={shell.material} />
-        ) : null}
-      </div>
+    <div className={styles.skin} style={paletteVars(p, OVOID_CANVAS)}>
+      <OvoidUnit uid={uid} params={OVOID_PARAMS} material={OVOID_MATERIAL} />
     </div>
   );
 }
 
 interface OvoidUnitProps {
   uid: string;
-  persona: Persona;
   params: OvoidParams;
   material: Material;
 }
 
-function OvoidUnit({ uid, persona, params, material }: OvoidUnitProps): JSX.Element {
+function OvoidUnit({ uid, params, material }: OvoidUnitProps): JSX.Element {
+  const persona = { optics: OVOID_OPTICS, unit: OVOID_CANVAS, furniture: HAS_HALO ? ['halo'] : [] };
   const geometry = useMemo(() => {
     const outline = ovoidOutline(params);
     const seams = seamTs(params).map((t, i) => ({
@@ -234,7 +197,10 @@ function OvoidUnit({ uid, persona, params, material }: OvoidUnitProps): JSX.Elem
         {/* Kills the plastic-vector flatness. Static — never animated. */}
         <filter id={`${uid}-grain`} x="-10%" y="-10%" width="120%" height="120%">
           <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" />
-          <feColorMatrix type="saturate" values="0" />
+          <feColorMatrix type="saturate" values="0" result="noise" />
+          {/* Clipped to the source alpha: `feTurbulence` is a generator and
+              fills its whole region otherwise. */}
+          <feComposite in="noise" in2="SourceGraphic" operator="in" />
         </filter>
 
         {/* Seams are not mathematically perfect. Also static. */}
@@ -588,7 +554,7 @@ function OvoidUnit({ uid, persona, params, material }: OvoidUnitProps): JSX.Elem
       </svg>
 
       {persona.furniture.includes('halo') ? (
-        <Halo persona={persona} params={params} outline={geometry.outline} />
+        <Halo params={params} outline={geometry.outline} />
       ) : null}
     </>
   );
@@ -605,15 +571,7 @@ function OvoidUnit({ uid, persona, params, material }: OvoidUnitProps): JSX.Elem
  * need an SVG mask becomes a static CSS `clip-path` on the non-rotating
  * parent.
  */
-function Halo({
-  persona,
-  params,
-  outline
-}: {
-  persona: Persona;
-  params: OvoidParams;
-  outline: string;
-}): JSX.Element {
+function Halo({ params, outline }: { params: OvoidParams; outline: string }): JSX.Element {
   const cy = params.top + 3;
   const rx = halfWidth(params, params.bellyT) * 0.78;
   return (
@@ -629,7 +587,7 @@ function Halo({
       >
         <svg
           className={styles.haloSvg}
-          viewBox={`0 0 ${persona.unit.width} ${persona.unit.height}`}
+          viewBox={`0 0 ${OVOID_CANVAS.width} ${OVOID_CANVAS.height}`}
           role="presentation"
           focusable="false"
         >

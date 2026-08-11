@@ -1,4 +1,75 @@
-import type { OvoidParams } from '../types';
+/** Materials shade differently on purpose (§4.2). */
+export type Material = 'metal' | 'ceramic';
+
+export const OVOID_CANVAS = { width: 150, height: 175 };
+
+/** Geometry of the shell, in the skin's own canvas coordinates. */
+export interface OvoidParams {
+  /** Vertical axis of the shell. */
+  cx: number;
+  /** Apex and base. */
+  top: number;
+  bottom: number;
+  /** Half-width immediately below the apex. */
+  apexHalf: number;
+  /** Widest half-width. */
+  bellyHalf: number;
+  /** Half-width where the shell meets its base. */
+  baseHalf: number;
+  /** 0..1 — where the belly sits between `top` and `bottom`. */
+  bellyT: number;
+  /**
+   * The right half is scaled by this. §4.2 asks for deliberate asymmetry:
+   * exactly 1 reads as a corporate mark, so never use it.
+   */
+  rightBias: number;
+  /** Number of panel seams following the shell curvature. */
+  panelCount: number;
+}
+
+export interface OpticSpec {
+  count: 1 | 2;
+  shape: 'teardrop';
+  arrangement: 'paired' | 'single';
+  /** Height of one optic; width follows the shape's ratio. */
+  size: number;
+  /** Centre-to-axis distance for `paired`. */
+  spread: number;
+  /** Vertical position along the shell, 0..1 from apex to base. */
+  atT: number;
+  /** Inward-down tilt in degrees, mirrored across the axis. */
+  tiltDeg: number;
+  /** §4.5 — one optic is fractionally brighter than its twin. */
+  rightBias: number;
+}
+
+/** §4.5 — the shell itself. Skin-local: nothing outside this folder needs it. */
+export const OVOID_PARAMS: OvoidParams = {
+  cx: 75,
+  top: 34,
+  bottom: 166,
+  apexHalf: 18,
+  bellyHalf: 55,
+  baseHalf: 40,
+  bellyT: 0.6,
+  // Never 1 (§4.2). The right flank carries ~3% more mass.
+  rightBias: 1.03,
+  panelCount: 3
+};
+
+export const OVOID_OPTICS: OpticSpec = {
+  count: 2,
+  shape: 'teardrop',
+  arrangement: 'paired',
+  size: 40,
+  spread: 16,
+  atT: 0.44,
+  tiltDeg: 28,
+  // §4.5 — the right optic runs fractionally hot.
+  rightBias: 1.06
+};
+
+export const OVOID_MATERIAL: Material = 'metal';
 
 /**
  * Parametric path generators for the `ovoid` shell form.
@@ -217,3 +288,13 @@ export function teardrop(width: number, height: number): string {
     'Z'
   ].join(' ');
 }
+
+/**
+ * Where the optic sits, in canvas coordinates. The name label is aligned to
+ * this (§1.2), so it is part of the skin's public shape rather than an
+ * internal detail.
+ */
+export const OVOID_OPTIC_CENTRE = {
+  x: OVOID_PARAMS.cx,
+  y: yAt(OVOID_PARAMS, OVOID_OPTICS.atT)
+};

@@ -1,12 +1,23 @@
-import type { PhraseSegment, ToastPayload } from '@shared/types';
+import type { CSSProperties } from 'react';
+import type { PhraseSegment, SkinId, ToastPayload } from '@shared/types';
 import type { Persona } from '@renderer/personas';
-import CharacterUnit from './CharacterUnit/CharacterUnit';
+import { getSkin } from '@renderer/skins';
+import CharacterUnit from './CharacterUnit';
 import Dialogue from './Dialogue';
 import EventToast from './EventToast';
 import styles from './Companion.module.css';
 
+/**
+ * Distance from the top of the label's line box down to its baseline, for
+ * 13 px Saira: half-leading plus the ascent. The label is positioned by this
+ * so its *baseline* lands on the optic centre (§1.2), not its box.
+ */
+const LABEL_BASELINE_PX = 11;
+
 export interface CompanionProps {
   persona: Persona;
+  /** Overrides the persona's default skin; supplied by settings. */
+  skinId?: SkinId;
   segments: PhraseSegment[];
   activeIndex: number;
   revealed: number;
@@ -34,6 +45,7 @@ export interface CompanionProps {
  */
 export default function Companion({
   persona,
+  skinId,
   segments,
   activeIndex,
   revealed,
@@ -55,23 +67,36 @@ export default function Companion({
 
   const typing = segment !== null && revealed < segment.text.length;
 
+  // §1.2 — the label's baseline sits on the optic's vertical centre, so speech
+  // reads as coming from the character rather than floating beside it. Every
+  // skin declares where its optic is, so this holds when the skin changes.
+  const skin = getSkin(skinId ?? persona.defaultSkin);
+  const zones = {
+    '--optic-y': `${skin.opticCenter.y}px`,
+    '--label-baseline': `${LABEL_BASELINE_PX}px`,
+    '--unit-w': `${skin.canvas.width}px`
+  } as CSSProperties;
+
   return (
-    <div className={styles.root} data-state={visible ? 'in' : 'out'}>
+    <div className={styles.root} style={zones} data-state={visible ? 'in' : 'out'}>
       {hasSpeech ? (
         <>
           {/* Zone A — fixed. Never moves or resizes with the text. */}
           <div className={styles.unitSlot}>
             <CharacterUnit
               persona={persona}
+              skinId={skinId}
               mode={mode}
               speaking={visible && typing}
+              reducedMotion={reducedMotion}
               unlit={unlit}
             />
           </div>
 
-          {/* Zone B — anchored at the unit's vertical midpoint; text stacks
-              upward above the name label. */}
+          {/* Zone B — the label is pinned to the optic and never moves; the
+              dialogue hangs beneath it (§1.1). */}
           <div className={styles.speechZone}>
+            <div className={styles.nameLabel}>{persona.nameLabel}</div>
             <div className={styles.dialogueSlot}>
               <Dialogue
                 key={speechKey}
@@ -82,7 +107,6 @@ export default function Companion({
                 onDismiss={onDismiss}
               />
             </div>
-            <div className={styles.nameLabel}>{persona.nameLabel}</div>
           </div>
         </>
       ) : null}

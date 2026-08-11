@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { MS_PER_CHAR } from '@shared/speechTiming';
-import CharacterUnit from '@renderer/components/CharacterUnit/CharacterUnit';
+import CharacterUnit from '@renderer/components/CharacterUnit';
 import Companion from '@renderer/components/Companion';
 import { getPersona, personaIds } from '@renderer/personas';
+import { allSkins } from '@renderer/skins';
+import type { SkinId } from '@shared/types';
 import { SCENES, type Scene } from './scenes';
 import styles from './Harness.module.css';
 
@@ -28,6 +30,7 @@ const GROUNDS: { id: Ground; label: string }[] = [
 export default function Harness(): JSX.Element {
   const [sceneId, setSceneId] = useState(SCENES[0]?.id ?? '');
   const [personaId, setPersonaId] = useState(personaIds()[0] ?? 'codex');
+  const [skinId, setSkinId] = useState<SkinId>('ovoid');
   const [ground, setGround] = useState<Ground>('dark');
   const [shot, setShot] = useState<string | null>(null);
 
@@ -93,6 +96,18 @@ export default function Harness(): JSX.Element {
           </label>
         </Group>
 
+        <Group label="Skin">
+          {allSkins().map((skin) => (
+            <Radio
+              key={skin.id}
+              name="skin"
+              label={skin.label}
+              checked={skin.id === skinId}
+              onChange={() => setSkinId(skin.id)}
+            />
+          ))}
+        </Group>
+
         {/* §4.1 — review tools, not extras. */}
         <Group label="Craft checks">
           <Check
@@ -144,9 +159,10 @@ export default function Harness(): JSX.Element {
             /* Keyed so switching scene or arming playback remounts rather
                than resetting state from an effect. */
             <PreviewStage
-              key={`${scene.id}:${playing}`}
+              key={`${scene.id}:${playing}:${skinId}`}
               scene={scene}
               persona={persona}
+              skinId={skinId}
               playing={playing}
               unlit={unlit}
             />
@@ -162,7 +178,14 @@ export default function Harness(): JSX.Element {
                     className={styles.scaler}
                     style={{ transform: `scale(${size / 150})` }}
                   >
-                    <CharacterUnit persona={persona} mode={null} speaking={false} unlit={unlit} />
+                    <CharacterUnit
+                    persona={persona}
+                    skinId={skinId}
+                    mode={null}
+                    speaking={false}
+                    reducedMotion={false}
+                    unlit={unlit}
+                  />
                   </div>
                 </div>
                 <span>{size} px</span>
@@ -185,11 +208,13 @@ export default function Harness(): JSX.Element {
 function PreviewStage({
   scene,
   persona,
+  skinId,
   playing,
   unlit
 }: {
   scene: Scene;
   persona: ReturnType<typeof getPersona>;
+  skinId: SkinId;
   playing: boolean;
   unlit: boolean;
 }): JSX.Element {
@@ -230,6 +255,7 @@ function PreviewStage({
   return (
     <Companion
       persona={persona}
+      skinId={skinId}
       segments={scene.segments}
       activeIndex={activeIndex}
       revealed={revealed}

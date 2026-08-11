@@ -42,10 +42,21 @@ export interface SpeechShowPayload {
   toast?: ToastPayload;
 }
 
+/**
+ * Which body the character is wearing. A persona is *who* is speaking; a skin
+ * is *what it looks like*. They are separate axes, so this crosses IPC on its
+ * own rather than riding on the persona id.
+ */
+export type SkinId = 'ovoid' | 'aperture';
+
+export const SKIN_IDS: readonly SkinId[] = ['ovoid', 'aperture'];
+
 /** main → renderer: 'state:update' */
 export interface StatePayload {
   muted: boolean;
   snoozedUntil: number | null;
+  /** Switchable at runtime from settings; no restart. */
+  skinId: SkinId;
 }
 
 /** renderer → main: 'speech:finished' / 'speech:dismissed' */
@@ -72,6 +83,8 @@ export interface OverlaySettings {
 export interface Settings {
   version: 1;
   startWithSystem: boolean;
+  /** Overrides the persona's default skin. */
+  skinId: SkinId;
   frequencyProfile: FrequencyProfile;
   quietHours: QuietHours;
   suppressOnFullscreen: boolean;

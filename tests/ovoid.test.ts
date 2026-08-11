@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { codex } from '@renderer/personas/codex';
 import { getPersona, personaIds } from '@renderer/personas';
 import {
+  OVOID_OPTICS,
+  OVOID_OPTIC_CENTRE,
+  OVOID_PARAMS,
   edgePoint,
   halfWidth,
   ovoidAccent,
@@ -12,7 +14,7 @@ import {
   seamTs,
   teardrop,
   yAt
-} from '@renderer/personas/forms/ovoid';
+} from '@renderer/skins/ovoid/geometry';
 
 /**
  * The shell form is the one piece of the redesign that is pure computation, so
@@ -22,7 +24,7 @@ import {
  * second persona changes the proportions.
  */
 
-const p = codex.shell.params;
+const p = OVOID_PARAMS;
 
 describe('halfWidth', () => {
   it('is widest at the belly', () => {
@@ -65,7 +67,7 @@ describe('edgePoint', () => {
       for (const side of [1, -1] as const) {
         const [x, y] = edgePoint(p, t, side);
         expect(x).toBeGreaterThan(0);
-        expect(x).toBeLessThan(codex.unit.width);
+        expect(x).toBeLessThan(150);
         expect(y).toBeGreaterThanOrEqual(p.top);
         expect(y).toBeLessThanOrEqual(p.bottom);
       }
@@ -115,7 +117,7 @@ describe('paths', () => {
   });
 
   it('places every seam below the optics and above the trim band', () => {
-    const opticY = yAt(p, codex.optics.atT);
+    const opticY = yAt(p, OVOID_OPTICS.atT);
     for (const t of seamTs(p)) {
       expect(yAt(p, t)).toBeGreaterThan(opticY);
       expect(t).toBeLessThan(0.83);
@@ -130,6 +132,16 @@ describe('paths', () => {
   });
 });
 
+describe('optic centre', () => {
+  it('is what the name label is aligned to, so it must sit on the optics', () => {
+    expect(OVOID_OPTIC_CENTRE.x).toBe(OVOID_PARAMS.cx);
+    expect(OVOID_OPTIC_CENTRE.y).toBeCloseTo(yAt(OVOID_PARAMS, OVOID_OPTICS.atT), 6);
+    // Inside the canvas, and above the trim band.
+    expect(OVOID_OPTIC_CENTRE.y).toBeGreaterThan(OVOID_PARAMS.top);
+    expect(OVOID_OPTIC_CENTRE.y).toBeLessThan(yAt(OVOID_PARAMS, 0.83));
+  });
+});
+
 describe('persona registry', () => {
   it('ships exactly one persona', () => {
     expect(personaIds()).toEqual(['codex']);
@@ -141,7 +153,7 @@ describe('persona registry', () => {
   });
 
   it('is deliberately asymmetric — perfect symmetry reads as a logo', () => {
-    expect(codex.shell.params.rightBias).not.toBe(1);
-    expect(codex.optics.rightBias).not.toBe(1);
+    expect(OVOID_PARAMS.rightBias).not.toBe(1);
+    expect(OVOID_OPTICS.rightBias).not.toBe(1);
   });
 });

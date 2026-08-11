@@ -86,31 +86,55 @@ point of the design.
 | Piece | File |
 |---|---|
 | Palette, type, easing (all of it) | `src/renderer/styles/tokens.css` |
-| Character unit, ten-layer stack | `src/renderer/components/CharacterUnit/` |
-| Shell geometry generators | `src/renderer/personas/forms/ovoid.ts` |
+| Skin registry | `src/renderer/skins/index.ts` |
+| `ovoid` skin | `src/renderer/skins/ovoid/` |
+| `aperture` skin | `src/renderer/skins/aperture/` |
+| Skin dispatcher and shared wrapper | `src/renderer/components/CharacterUnit.tsx` |
 | Persona data | `src/renderer/personas/codex.ts` |
 | Bare dialogue text | `src/renderer/components/Dialogue.tsx` |
 | Framed toast | `src/renderer/components/EventToast.tsx` |
 | Zone layout | `src/renderer/components/Companion.module.css` |
 | Design harness | `src/renderer/design/Harness.tsx` |
 
-**Adding a persona** is adding a `Persona` object to the registry in
-`src/renderer/personas/index.ts`. A persona reusing `ovoid` needs no new code
-at all; a new `ShellForm` needs a generator beside `ovoid.ts` and a branch in
-`CharacterUnit`. Nothing else in the renderer is character-specific.
+**Persona and skin are separate axes.** A persona is *who is speaking* — name,
+palette, phrase bank, voice. A skin is *what it looks like* — geometry and
+motion. Any persona can wear any skin, and a skin renders whatever palette it
+is handed; a skin that hardcodes a colour is a bug.
+
+**Adding a skin** is one folder under `skins/` and one entry in
+`skins/index.ts`. Nothing else changes. The skin declares its own canvas and
+the position of its optic, which is what the name label aligns to, so the
+composition follows automatically. Users switch skins from Settings →
+Appearance, live, with no restart.
+
+**Adding a persona** is a `Persona` object in `src/renderer/personas/index.ts`
+plus its `defaultSkin`.
 
 **Run `pnpm design`** before touching anything visual. It shows every state
 over white, mid grey, dark and a loaded screenshot, with unlit, greyscale,
 32 px and heavy-blur toggles — the four checks the unit has to pass. It needs
 no Electron, so it does not start the tray app or its monitors.
 
-**Only layers 0, 6, 7 and 9 of the unit animate**, and only by `opacity` and
-`transform`. Layers 1–5 and 8 are rasterised once and never touched. Do not
-animate a filter primitive, a gradient stop or a path `d`: each re-evaluates
-the whole filter graph every frame, permanently, on an idle machine. The halo
-lives outside the shell SVG for exactly this reason — rotating a `<g>` inside
-it cost 0.9% CPU on its own, three times the whole budget, because it dirtied
-the filter graph every frame.
+**Anything that moves gets its own element.** Only layers 0, 6, 7 and the
+motion groups animate, and only by `opacity` and `transform`. Never animate a
+filter primitive, a gradient stop or a path `d`.
+
+The rule that matters most, learned twice: **do not animate a `<g>` inside an
+SVG that carries filters.** Chromium re-rasterises that SVG's whole filter
+graph every frame, permanently, on an idle machine. The ovoid's rotating halo
+cost 0.9% CPU on its own that way; the aperture's three moving groups cost
+1.61%. Both dropped to noise once each moving part became its own element with
+`will-change: transform` — which is why `aperture` is five stacked SVGs rather
+than one, and why the halo lives outside the shell's SVG.
+
+Two related traps, both hit during the redesign:
+
+- `feTurbulence` is a *generator*: it fills the whole filter region regardless
+  of the source, so grain must be composited back with
+  `feComposite operator="in" in2="SourceGraphic"` or it paints a rectangle.
+- `mix-blend-mode` needs an explicit `isolation: isolate` ancestor, but only as
+  far up as the layers it should blend with. Isolate too tightly and the light
+  spill sees nothing; too loosely and the grain's `overlay` washes the canvas.
 
 ## Windows-specific notes
 
@@ -191,7 +215,8 @@ they can be accepted or reversed on review.
 | Idle RAM, private bytes (commit) | | | 189.0 MB |
 | Idle RAM, sum of working sets | | | 311.1 MB |
 | Idle CPU, 60 s average | < 0.3% | > 1% | **0.114%** |
-| Renderer CPU, overlay visible | < 0.3% | > 1% | **0.251%** |
+| Renderer CPU, overlay visible (`ovoid`) | < 0.3% | > 1% | 0.33% |
+| Renderer CPU, overlay visible (`aperture`) | < 0.3% | > 1% | 0.31% |
 | Cold start to tray | < 2.5 s | > 5 s | **0.72 s** |
 
 Three memory figures, because the choice of metric decides whether this passes.
@@ -200,10 +225,15 @@ processes, so it overstates the real cost; private working set — the number
 Task Manager shows in its Memory column — is 80.7 MB. On any reading except
 the most pessimistic one, the budget is met.
 
-The overlay-visible figure is the renderer process with a phrase on screen and
-every idle animation running — bob, optic breathe, light spill and halo — with
-`backgroundThrottling: false`. It was measured in the design harness rather
-than by waiting for a monitor to fire; the harness renders the same components
-with the same animations. Per-layer: 0.03% with all animation off, and roughly
-0.22% for any one of them, because they share a single compositor frame loop
-rather than adding up.
+The overlay-visible figures are the renderer process with a phrase on screen
+and every idle animation running, `backgroundThrottling: false`, measured in
+the design harness at 1500 × 940 rather than by waiting for a monitor to fire.
+
+Both sit marginally over the 0.3% target, and the attribution explains why:
+with every animation disabled the renderer costs **0.001%**, and switching any
+single one back on takes it to ~0.29%. The cost is the 60 fps compositor loop
+itself, not the number of layers running in it — disabling two of the three
+animations barely moves the number. Under 0.3% is therefore only reachable by
+a completely still overlay, which the design rules out. The real overlay
+composites a 560 × 460 window rather than the harness's full page, so these are
+an upper bound.

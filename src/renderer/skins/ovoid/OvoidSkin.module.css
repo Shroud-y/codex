@@ -4,25 +4,11 @@
    idle machine — this component is on screen with `backgroundThrottling`
    disabled, so that cost never goes away. */
 
-/* Carries the persona palette as inline custom properties, nothing else. */
-.root {
+/* Carries this skin's palette as inline custom properties. The bob lives on
+   the shared wrapper in `CharacterUnit`, because every skin bobs. */
+.skin {
   position: relative;
   display: block;
-}
-
-.unit {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 100%;
-  /* The bob. Transform only, on the element rather than inside the SVG, so it
-     composites without touching a single SVG attribute. */
-  animation: bob var(--bob-ms, 5000ms) ease-in-out infinite;
-  will-change: transform;
-}
-
-.unit[data-idle='still'] {
-  animation: none;
 }
 
 .svg {
@@ -36,9 +22,13 @@
   isolation: isolate;
 }
 
-/* Layers 1–5 and 8: rasterised once and left alone. */
+/* Layers 1–5 and 8: rasterised once and left alone. Deliberately carries no
+   `will-change` — these groups never move, and promoting them to their own
+   composited layers inside a parent that *does* move only adds surfaces to
+   composite every frame. Chromium caches the raster of the moving parent,
+   which is what actually does the caching here. */
 .static {
-  will-change: transform;
+  /* marker class; the caching is the parent layer's, not this element's */
 }
 
 /* Layer 6 — the emissive stack breathes. */
@@ -47,11 +37,12 @@
   will-change: opacity;
 }
 
-/* Layer 7 — spill tracks the optics exactly; if it lagged, the light would
-   appear to leave the object before the object dimmed. */
+/* Layer 7 — static on purpose. Breathing it in step with the optics needs a
+   whole extra composited layer running at 60 fps to change a few percent of a
+   26%-opacity gradient: measurable on an idle machine, invisible on screen.
+   The optics' own brightness carries the breathing. */
 .spill {
-  animation: breathe 2400ms ease-in-out infinite;
-  will-change: opacity;
+  opacity: 0.9;
 }
 
 /* Layer 9 — furniture, in its own composited layer above the shell SVG.
@@ -79,33 +70,24 @@
 
 /* While speaking the optics run a little hotter and a little faster — the
    only cue that ties the unit to the text. */
-.unit[data-speaking='true'] .optics,
-.unit[data-speaking='true'] .spill {
+[data-speaking='true'] .optics {
   animation-duration: 1300ms;
 }
 
 /* ---- rage (§5) ---------------------------------------------------- */
 
-.unit[data-mode='rage'] {
-  --p-light: var(--p-rage);
-  --p-light-core: var(--p-rage-core);
-  --p-light-dim: #7a1f10;
-}
-
-.unit[data-mode='rage'] .optics,
-.unit[data-mode='rage'] .spill {
+[data-mode='rage'] .optics {
   animation: flicker 190ms steps(3, end) infinite;
 }
 
 /* The halo rotation jumps rather than accelerating smoothly. */
-.unit[data-mode='rage'] .haloSpin {
+[data-mode='rage'] .haloSpin {
   animation: spin 2600ms steps(9, end) infinite;
 }
 
 /* ---- whisper ------------------------------------------------------- */
 
-.unit[data-mode='whisper'] .optics,
-.unit[data-mode='whisper'] .spill {
+[data-mode='whisper'] .optics {
   animation-duration: 6000ms;
   opacity: 0.7;
 }
@@ -114,18 +96,8 @@
 
 /* Everything emissive, bloomed or spilled goes away. What is left has to
    read as a solid, lit, three-dimensional object on its own. */
-.unit[data-unlit='true'] .emissive {
+[data-unlit='true'] .emissive {
   display: none;
-}
-
-@keyframes bob {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(0, calc(var(--bob-px, 4px) * -1), 0);
-  }
 }
 
 @keyframes breathe {
@@ -162,20 +134,21 @@
   }
 }
 
+[data-reduced='true'] .optics,
+[data-reduced='true'] .haloSpin {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .unit,
   .optics,
-  .spill,
   .haloSpin,
-  .unit[data-mode='rage'] .optics,
-  .unit[data-mode='rage'] .spill,
-  .unit[data-mode='rage'] .haloSpin {
+  [data-mode='rage'] .optics,
+  [data-mode='rage'] .haloSpin {
     animation: none;
   }
 
   /* Still needs to look lit, just not moving. */
-  .optics,
-  .spill {
+  .optics {
     opacity: 1;
   }
 }

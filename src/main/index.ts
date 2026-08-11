@@ -114,6 +114,7 @@ async function bootstrap(): Promise<void> {
   const overlay = new OverlayWindow();
   overlay.create(OverlayWindow.preloadPath());
   overlay.setOffsets(settingsStore.current.overlay);
+  overlay.setSkin(settingsStore.current.skinId);
 
   const probe = new PresenceProbe();
   probe.start();
@@ -287,6 +288,7 @@ async function bootstrap(): Promise<void> {
 
   settingsStore.onChange((settings) => {
     overlay.setOffsets(settings.overlay);
+    overlay.setSkin(settings.skinId);
     void syncMonitors(settings);
     reconcileAutostart(settings.startWithSystem);
     settingsWindow.send(IPC.settingsUpdated, settings);

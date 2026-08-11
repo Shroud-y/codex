@@ -10,6 +10,7 @@ const clockSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const settingsSchema = z.object({
   version: z.literal(1),
   startWithSystem: z.boolean(),
+  skinId: z.enum(['ovoid', 'aperture']),
   frequencyProfile: z.enum(['chatty', 'balanced', 'reserved', 'rare']),
   quietHours: z.object({ enabled: z.boolean(), from: clockSchema, to: clockSchema }),
   suppressOnFullscreen: z.boolean(),
@@ -49,6 +50,7 @@ export function defaultSettings(downloadsDir: string): Settings {
   return {
     version: 1,
     startWithSystem: true,
+    skinId: 'ovoid',
     frequencyProfile: 'balanced',
     quietHours: { enabled: true, from: '23:00', to: '08:00' },
     suppressOnFullscreen: true,

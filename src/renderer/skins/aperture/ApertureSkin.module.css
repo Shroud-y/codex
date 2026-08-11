@@ -1,0 +1,227 @@
+/* Three groups with three different periods — that is what stops a mechanism
+   looking like one spinning asset. Only opacity and transform, ever. */
+
+.skin {
+  position: relative;
+  display: block;
+  /* Contain `screen` blending: without this the spill layer blends against
+     the transparent desktop and vanishes. */
+  isolation: isolate;
+}
+
+/* One stacked element per moving part, so each is its own composited layer
+   and no filter is re-evaluated when it moves. */
+.frame,
+.ring,
+.plate,
+.eye,
+.spill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 75px 88px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Drift, not rotation. */
+.frame {
+  animation: frame-drift 12000ms ease-in-out infinite;
+  will-change: transform;
+  /* Contains the grain's `overlay` blend. Without this it composites against
+     the whole skin group and paints a grey rectangle over the unit's bounds
+     instead of a texture over the ribs. The spill's `screen` blend must NOT be
+     contained this way — it lives in its own element precisely so it can see
+     the layers beneath it. */
+  isolation: isolate;
+}
+
+/* Continuous, and the opposite direction to the frame. */
+.ring {
+  animation: ring-spin 40000ms linear infinite;
+  will-change: transform;
+}
+
+/* Aperture breathing: the slit itself opens and closes. */
+.eye {
+  animation: aperture 2400ms ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.spill {
+  mix-blend-mode: screen;
+  /* Static on purpose. Breathing it in step with the eye needs a fifth
+     composited layer running at 60 fps for a change of a few percent in a
+     20%-opacity gradient — measurable on an idle machine, invisible on
+     screen. The eye's own brightness carries the breathing. */
+  opacity: 0.86;
+}
+
+/* §3.1 — barely visible in `normal`. If the unit looks permanently broken,
+   the glitch has nothing to escalate to. */
+.cracks {
+  opacity: 0.25;
+}
+
+.crackLit {
+  opacity: 0;
+}
+
+/* While speaking the eye modulates gently, ±8%, and nothing else moves. */
+[data-speaking='true'] .eye {
+  animation: aperture-speak 900ms ease-in-out infinite;
+}
+
+/* ---- rage: the mechanism loses synchronisation (§3.1) --------------- */
+
+/* Each group jumps to its desynchronised position and holds. Returning to
+   `normal` drops these rules, and with no transition anywhere the whole unit
+   snaps back in a single frame — the abruptness is the character. */
+[data-mode='rage'] .frame {
+  animation: frame-jitter 220ms steps(4, jump-none) infinite;
+  transform: rotate(8deg);
+}
+
+[data-mode='rage'] .ring {
+  animation: none;
+  transform: rotate(-25deg);
+}
+
+[data-mode='rage'] .eye {
+  animation: none;
+  transform: scaleY(0.15);
+}
+
+[data-mode='rage'] .plate {
+  filter: brightness(0.55);
+}
+
+[data-mode='rage'] .cracks {
+  opacity: 0.8;
+}
+
+[data-mode='rage'] .crackLit {
+  opacity: 0.85;
+}
+
+[data-mode='rage'] .spill {
+  opacity: 1;
+}
+
+/* Chromatic split across the whole unit, decaying to nothing over 220 ms.
+   On `.skin`, not on `.svg`: there are five `.svg` elements here, and putting
+   it there ran five simultaneous drop-shadow animations and stacked the
+   offsets five deep. */
+[data-mode='rage'] .skin {
+  animation: rgb-split 220ms ease-out forwards;
+}
+
+/* ---- whisper -------------------------------------------------------- */
+
+[data-mode='whisper'] .eye {
+  animation-duration: 6000ms;
+  opacity: 0.72;
+}
+
+/* ---- §4.1 unlit review mode ---------------------------------------- */
+
+[data-unlit='true'] .emissive {
+  display: none;
+}
+
+/* ---- reduced motion -------------------------------------------------- */
+
+[data-reduced='true'] .frame,
+[data-reduced='true'] .ring,
+[data-reduced='true'] .eye,
+[data-reduced='true'] .skin {
+  animation: none;
+}
+
+@keyframes frame-drift {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes aperture {
+  0%,
+  100% {
+    transform: scaleY(0.82);
+    opacity: 0.86;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes aperture-speak {
+  0%,
+  100% {
+    transform: scaleY(0.96);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* ±2 px at ~18 Hz, on top of the held +8°. */
+@keyframes frame-jitter {
+  0% {
+    transform: rotate(8deg) translate(0, 0);
+  }
+  25% {
+    transform: rotate(8deg) translate(2px, -1px);
+  }
+  50% {
+    transform: rotate(8deg) translate(-1px, 2px);
+  }
+  75% {
+    transform: rotate(8deg) translate(1px, -2px);
+  }
+}
+
+@keyframes rgb-split {
+  from {
+    filter: drop-shadow(2px 0 0 var(--p-rage-core)) drop-shadow(-2px 0 0 var(--cyan));
+  }
+  to {
+    filter: drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  .ring,
+  .eye,
+  .svg,
+  [data-mode='rage'] .frame,
+  [data-mode='rage'] .skin,
+  [data-speaking='true'] .eye {
+    animation: none;
+  }
+
+  .eye {
+    opacity: 1;
+  }
+}

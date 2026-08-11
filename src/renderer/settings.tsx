@@ -1,9 +1,11 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { FrequencyProfile, Settings } from '@shared/types';
+import type { FrequencyProfile, Settings, SkinId } from '@shared/types';
+import { SKIN_IDS } from '@shared/types';
 import './styles/panel.css';
 
 const FREQUENCIES: FrequencyProfile[] = ['chatty', 'balanced', 'reserved', 'rare'];
+const SKIN_LABELS: Record<SkinId, string> = { ovoid: 'Ovoid', aperture: 'Aperture' };
 const MONITOR_LABELS: Record<string, string> = {
   system: 'System (CPU, memory, disk, thermal, battery)',
   process: 'Processes (watchlist)',
@@ -65,6 +67,22 @@ function SettingsPanel(): JSX.Element {
             </select>
           </label>
           <span className="muted">scales every cooldown at once</span>
+        </div>
+        <div className="row">
+          <label>
+            Appearance
+            <select
+              value={settings.skinId}
+              onChange={(event) => patch({ skinId: event.target.value as SkinId })}
+            >
+              {SKIN_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {SKIN_LABELS[id]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="muted">changes the overlay immediately</span>
         </div>
       </section>
 
