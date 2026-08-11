@@ -2,6 +2,7 @@ import type { SkinId } from '@shared/types';
 import type { Skin } from './types';
 import OvoidSkin, { OVOID_CANVAS, OVOID_OPTIC_CENTRE } from './ovoid/OvoidSkin';
 import ApertureSkin, { APERTURE_CANVAS, APERTURE_OPTIC_CENTRE } from './aperture/ApertureSkin';
+import { EYE_MOTION } from './aperture/eyeUniforms';
 
 export * from './types';
 
@@ -44,14 +45,32 @@ const REGISTRY: Record<SkinId, Skin> = {
     /* The persona's gold is tuned for a painted shell. On bare machined ribs
        it reads decorative against a cool desktop, so this skin pulls the
        saturation down and adds grey. Stated as data rather than hardcoded in
-       the component, which is exactly what `paletteOverrides` is for. */
-    paletteOverrides: { trim: '#B49A4E', trimLit: '#D8C486' },
+       the component, which is exactly what `paletteOverrides` is for.
+
+       The rage red is colder here for the same reason. The persona's #FF5A3C
+       is already part orange, and the shader eye's blowout ramps whatever it
+       is given through orange and yellow on the way to white — with the warm
+       red in, rage read as fire rather than as anger. */
+    paletteOverrides: {
+      trim: '#B49A4E',
+      trimLit: '#D8C486',
+      rage: '#E80808',
+      rageCore: '#FF5A5A'
+    },
     motion: {
       idle: [
         { target: 'unit', kind: 'bob', amplitude: 4, periodMs: 5000 },
         { target: 'frame', kind: 'oscillate', amplitude: 3, periodMs: 12_000 },
         { target: 'ring', kind: 'spin', amplitude: -360, periodMs: 40_000 },
-        { target: 'eye', kind: 'breathe', amplitude: 0.18, periodMs: 2400 }
+        /* Declared here as before, but the shader eye is what performs it —
+           `EYE_MOTION` is the single source and this entry reads from it, so
+           the two cannot drift apart. */
+        {
+          target: 'eye',
+          kind: 'breathe',
+          amplitude: EYE_MOTION.breatheAmplitude,
+          periodMs: EYE_MOTION.breathePeriodMs
+        }
       ],
       glitch: {
         frameDeg: 8,

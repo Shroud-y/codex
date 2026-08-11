@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import type { SkinProps } from '../types';
 import { effectivePalette, paletteVars } from '../palette';
 import {
@@ -15,6 +15,7 @@ import {
   ribLine,
   ticks
 } from './geometry';
+import ShaderEye, { shaderEyeSupported } from './ShaderEye';
 import styles from './ApertureSkin.module.css';
 
 export const APERTURE_CANVAS = CANVAS;
@@ -37,9 +38,25 @@ export const APERTURE_OPTIC_CENTRE = CENTRE;
  * The layer stack of §2 is unchanged by that split — it just runs across five
  * elements instead of one.
  */
-export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element {
+export default function ApertureSkin({
+  palette,
+  mode,
+  speaking,
+  reducedMotion,
+  unlit = false
+}: SkinProps): JSX.Element {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const p = effectivePalette(palette, mode);
+
+  /* Decided once, at first paint: a machine without WebGL2 or half-float
+     render targets keeps the SVG eye. An always-on overlay must not lose its
+     optic because a driver said no — and the SVG version is a fair fallback
+     rather than a placeholder, since it is what shipped. `glFailed` covers the
+     rarer case of a driver that passes the probe and then fails to link. */
+  const probed = useMemo(() => shaderEyeSupported(), []);
+  const [glFailed, setGlFailed] = useState(false);
+  const useShader = probed && !glFailed;
+  const onGlUnavailable = useCallback(() => setGlFailed(true), []);
 
   const geo = useMemo(
     () => ({
@@ -394,7 +411,28 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
         </svg>
       </div>
 
-      {/* ---- 0 + 6 · eye · aperture breathing -------------------------- */}
+      {/* ---- 0 + 6 · eye · aperture breathing --------------------------
+          Light, not a shape: the core goes white because the radiance exceeds
+          what the tonemapper can hold, and the contour is torn by a domain
+          warp rather than by hand-placed anchors. Neither is reachable in SVG,
+          which is why this one layer is a canvas.
+
+          The canvas owns its own breathing and its own rage compression, so it
+          uses `.eyeGl` — `.eye`'s CSS transforms would squash the bloom along
+          with the slit and animate the aperture twice over. */}
+      {useShader ? (
+        <div className={`${styles.eyeGl} ${styles.emissive}`} data-motion="eye">
+          <ShaderEye
+            baseHue={p.light}
+            coreHue={p.lightCore}
+            mode={mode}
+            speaking={speaking}
+            reducedMotion={reducedMotion}
+            unlit={unlit}
+            onUnavailable={onGlUnavailable}
+          />
+        </div>
+      ) : (
       <div className={`${styles.eye} ${styles.emissive}`} data-motion="eye">
         <svg className={styles.svg} viewBox={box} role="presentation" focusable="false">
           <defs>
@@ -450,6 +488,7 @@ export default function ApertureSkin({ palette, mode }: SkinProps): JSX.Element 
           </g>
         </svg>
       </div>
+      )}
 
       {/* ---- 7 · light spill onto ribs, ring and panes ------------------ */}
       {/* Its own element so it can `screen` against the layers beneath it —

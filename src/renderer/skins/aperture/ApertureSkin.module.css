@@ -15,10 +15,19 @@
 .ring,
 .plate,
 .eye,
+.eyeGl,
 .spill {
   position: absolute;
   inset: 0;
   transform-origin: 75px 88px;
+}
+
+/* The shader eye animates inside the canvas, so this layer carries no CSS
+   animation at all — neither the idle breathing nor the rage compression.
+   Scaling the element would squash the bloom and the dispersion along with the
+   slit, and would run the aperture twice: once in CSS, once in the shader. */
+.eyeGl {
+  animation: none;
 }
 
 .svg {

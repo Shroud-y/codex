@@ -127,6 +127,29 @@ cost 0.9% CPU on its own that way; the aperture's three moving groups cost
 `will-change: transform` — which is why `aperture` is five stacked SVGs rather
 than one, and why the halo lives outside the shell's SVG.
 
+**The aperture's eye is a WebGL canvas; every other layer is still SVG.** §3.1
+asks for a membrane of rendered light — a core that is white *because* of its
+intensity, colour only in the falloff, a torn contour. SVG cannot produce the
+first of those: values clamp at 1.0, so a blowout has to be painted white
+rather than emerge, and `feGaussianBlur` gives blur rather than bloom. The
+shader accumulates radiance in an RGBA16F target, blooms it down a ladder of
+half-resolution blurs, and tonemaps with ACES; the contour is a signed distance
+field displaced by fBm, so the tearing costs no hand-placed anchors. It writes
+premultiplied alpha, so the canvas stays transparent where the field is dark
+and the SVG layers beneath show through.
+
+`prototype/shader-eye/` is the standalone harness this was chosen from — it
+runs with `node prototype/shader-eye/server.mjs` and imports nothing from the
+app. Machines without WebGL2 or half-float render targets keep the SVG eye, as
+do drivers that fail after the probe passes.
+
+The costly part turned out not to be the shading. Capping the drawn frames
+under a deadline while still re-requesting every vsync moved renderer CPU by
+hundredths; scheduling the next `requestAnimationFrame` from a 30 fps timer, so
+the *callback* stops firing 60 times a second, took it from 0.93% to 0.38%.
+Uniforms that only change with the mode are uploaded on change rather than per
+frame, for the same reason: this layer costs GL call count, not fragments.
+
 Two related traps, both hit during the redesign:
 
 - `feTurbulence` is a *generator*: it fills the whole filter region regardless
@@ -216,7 +239,8 @@ they can be accepted or reversed on review.
 | Idle RAM, sum of working sets | | | 311.1 MB |
 | Idle CPU, 60 s average | < 0.3% | > 1% | **0.114%** |
 | Renderer CPU, overlay visible (`ovoid`) | < 0.3% | > 1% | 0.33–0.50% |
-| Renderer CPU, overlay visible (`aperture`) | < 0.3% | > 1% | 0.31–0.50% |
+| Renderer CPU, overlay visible (`aperture`, shader eye) | < 0.3% | > 1% | 0.37–0.39% |
+| Renderer CPU, overlay visible (`aperture`, shader eye, rage) | < 0.3% | > 1% | 0.47% |
 | Cold start to tray | < 2.5 s | > 5 s | **0.72 s** |
 
 Three memory figures, because the choice of metric decides whether this passes.
@@ -228,6 +252,12 @@ the most pessimistic one, the budget is met.
 The overlay-visible figures are the renderer process with a phrase on screen
 and every idle animation running, `backgroundThrottling: false`, measured in
 the design harness at 1500 × 940 rather than by waiting for a monitor to fire.
+
+The aperture rows were re-measured after the eye became a shader, against
+`ovoid` at 0.15% in the same session as the control. The window has to be
+genuinely on screen for any of it to mean anything: a hidden Electron window
+throttles `requestAnimationFrame` to about 1 Hz and stops compositing, which
+reports the shader eye at 0.02% and every screenshot of it as a stale frame.
 
 Ranges, not points, because the number is not stable between runs: identical
 `ovoid` code measured 0.33% in one session and 0.50% an hour later, so ambient
