@@ -1,7 +1,10 @@
 import { screen, type BrowserWindow, type Display } from 'electron';
 
-export const OVERLAY_WIDTH = 460;
-export const OVERLAY_HEIGHT = 340;
+/* §3 — the canvas the three zones are laid out inside. Content grows leftward
+   and upward within it, so these never change at runtime and the window never
+   moves while a phrase is on screen. */
+export const OVERLAY_WIDTH = 560;
+export const OVERLAY_HEIGHT = 460;
 
 /** §10.1 */
 const RIGHT_INSET = 24;

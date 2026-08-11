@@ -1,66 +1,197 @@
-/* The window is a fixed 460×340 canvas; content is positioned inside it, so a
-   growing bubble never moves the window (§13.1). */
+/* The window is a fixed 560×460 canvas. Everything inside is anchored to the
+   right edge and grows leftward and upward, so a four-line phrase and a
+   one-line phrase put the window in exactly the same place (§3). */
+
 .root {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  inset: 0;
   /* Click-through everywhere except elements that opt back in. */
   pointer-events: none;
 }
 
-.bubbleSlot {
+/* ---- Zone A · character unit — fixed geometry ---------------------- */
+
+.unitSlot {
+  position: absolute;
+  /* Low enough that five wrapped lines still clear the top of the canvas. */
+  top: 84px;
+  right: 28px;
+  animation: unit-in 320ms var(--ease-entry) both;
+}
+
+.root[data-state='out'] .unitSlot {
+  /* Text clears first, then the unit leaves (§5). */
+  animation: unit-out 260ms ease-in 140ms both;
+}
+
+/* ---- Zone B · name label and dialogue ------------------------------ */
+
+.speechZone {
+  position: absolute;
+  /* Right edge sits just clear of the unit; bottom is pinned so the text
+     stack grows upward. */
+  right: 192px;
+  /* Pins the name label's line box on the unit's vertical midpoint (84 + 175/2). */
+  bottom: 281px;
   display: flex;
-  justify-content: flex-end;
-  opacity: 0;
-  transform: translateY(12px);
-  transition:
-    opacity 180ms ease-in,
-    transform 180ms ease-in;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 320px;
 }
 
-.visible .bubbleSlot {
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    opacity 220ms ease-out,
-    transform 220ms ease-out;
+.dialogueSlot {
+  margin-bottom: 8px;
+  animation: fade-in 200ms ease-out 200ms both;
 }
 
-.hidden .bubbleSlot {
-  opacity: 0;
-  transform: translateY(8px);
+.root[data-state='out'] .dialogueSlot {
+  animation: fade-out 140ms ease-in both;
+}
+
+.nameLabel {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  /* The tracking is trailing whitespace on the last glyph; pull it back so
+     the label optically aligns with the text above it. */
+  margin-right: -0.22em;
+  color: var(--cyan);
+  text-shadow: var(--label-shadow);
+  white-space: nowrap;
+  animation: fade-in 240ms ease-out 120ms both;
+}
+
+.root[data-state='out'] .nameLabel {
+  animation: fade-out 140ms ease-in both;
+}
+
+/* ---- Zone C · event toast ------------------------------------------ */
+
+.toastSlot {
+  position: absolute;
+  left: 24px;
+  right: 28px;
+  bottom: 22px;
+}
+
+/* ---- rage scanline tears ------------------------------------------- */
+
+.tears {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tear {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 177, 153, 0.75),
+    rgba(79, 216, 232, 0.5),
+    transparent
+  );
+  animation: tear-sweep 150ms linear both;
+}
+
+.tear:nth-child(1) {
+  top: 12%;
+}
+
+.tear:nth-child(2) {
+  top: 46%;
+  animation-delay: 30ms;
+}
+
+.tear:nth-child(3) {
+  top: 74%;
+  animation-delay: 60ms;
 }
 
 /* Belt and braces for the idle-CPU budget: while the overlay is on its way
    out, nothing inside it may keep animating. */
-.hidden *,
-.hidden *::before,
-.hidden *::after {
-  animation: none !important;
+.root[data-state='out'] .tears {
+  display: none;
 }
 
-.portraitSlot {
-  opacity: 0;
-  transform: translateY(8px) scale(0.96);
-  transition:
-    opacity 200ms ease-out,
-    transform 200ms ease-out;
+@keyframes unit-in {
+  from {
+    opacity: 0;
+    transform: translate3d(40px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
-.visible .portraitSlot {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+@keyframes unit-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(40px, 0, 0);
+  }
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes tear-sweep {
+  from {
+    opacity: 0.9;
+    transform: translate3d(-6%, 0, 0) scaleY(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(6%, 0, 0) scaleY(0.4);
+  }
+}
+
+/* §5 — reduced motion keeps colour, layout and fades, and drops everything
+   that moves. */
 @media (prefers-reduced-motion: reduce) {
-  .bubbleSlot,
-  .portraitSlot,
-  .visible .bubbleSlot,
-  .visible .portraitSlot {
-    transition: none;
+  .unitSlot,
+  .dialogueSlot,
+  .nameLabel,
+  .root[data-state='out'] .unitSlot,
+  .root[data-state='out'] .dialogueSlot,
+  .root[data-state='out'] .nameLabel {
+    animation-name: fade-in;
+    animation-duration: 160ms;
+    animation-delay: 0ms;
+  }
+
+  .root[data-state='out'] .unitSlot,
+  .root[data-state='out'] .dialogueSlot,
+  .root[data-state='out'] .nameLabel {
+    animation-name: fade-out;
+  }
+
+  .tears {
+    display: none;
   }
 }

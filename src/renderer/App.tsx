@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Companion from './components/Companion';
+import { getPersona } from './personas';
 import { useSpeech } from './hooks/useSpeech';
 
 export default function App(): JSX.Element {
@@ -54,12 +55,14 @@ export default function App(): JSX.Element {
   return (
     <>
       <Companion
+        persona={getPersona(view.speech?.personaId)}
         segments={view.speech?.segments ?? []}
         activeIndex={view.activeIndex}
         revealed={view.revealed}
         visible={view.visible}
         reducedMotion={view.reducedMotion}
         onDismiss={view.dismiss}
+        toast={view.speech?.toast ?? null}
       />
       <audio
         ref={audioRef}

@@ -1,3 +1,5 @@
+@import './tokens.css';
+
 * {
   box-sizing: border-box;
 }
@@ -15,7 +17,7 @@ body.overlay-body {
   /* The overlay is decoration with opinions — never a mouse target by default. */
   user-select: none;
   cursor: default;
-  font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+  font-family: var(--font-ui);
 }
 
 #root {

@@ -12,6 +12,7 @@ audio files are dropped in later without code changes.
 ```sh
 pnpm install
 pnpm dev          # electron-vite dev
+pnpm design       # overlay design harness in a browser, no Electron
 pnpm typecheck    # tsc for the node and web projects
 pnpm lint
 pnpm test         # vitest, pure logic only
@@ -75,6 +76,42 @@ Dev builds only, from the tray. Live event log, a dropdown that fires any
 synthetic event, active cooldowns with remaining time, and the current
 suppression state with its reason.
 
+## Overlay presentation
+
+**There is no dialogue box.** Speech is bare text on the desktop, kept legible
+by its shadows alone. The event toast is the only element with visible chrome.
+Anything that puts a fill, border or radius behind the dialogue undoes the
+point of the design.
+
+| Piece | File |
+|---|---|
+| Palette, type, easing (all of it) | `src/renderer/styles/tokens.css` |
+| Character unit, ten-layer stack | `src/renderer/components/CharacterUnit/` |
+| Shell geometry generators | `src/renderer/personas/forms/ovoid.ts` |
+| Persona data | `src/renderer/personas/codex.ts` |
+| Bare dialogue text | `src/renderer/components/Dialogue.tsx` |
+| Framed toast | `src/renderer/components/EventToast.tsx` |
+| Zone layout | `src/renderer/components/Companion.module.css` |
+| Design harness | `src/renderer/design/Harness.tsx` |
+
+**Adding a persona** is adding a `Persona` object to the registry in
+`src/renderer/personas/index.ts`. A persona reusing `ovoid` needs no new code
+at all; a new `ShellForm` needs a generator beside `ovoid.ts` and a branch in
+`CharacterUnit`. Nothing else in the renderer is character-specific.
+
+**Run `pnpm design`** before touching anything visual. It shows every state
+over white, mid grey, dark and a loaded screenshot, with unlit, greyscale,
+32 px and heavy-blur toggles — the four checks the unit has to pass. It needs
+no Electron, so it does not start the tray app or its monitors.
+
+**Only layers 0, 6, 7 and 9 of the unit animate**, and only by `opacity` and
+`transform`. Layers 1–5 and 8 are rasterised once and never touched. Do not
+animate a filter primitive, a gradient stop or a path `d`: each re-evaluates
+the whole filter graph every frame, permanently, on an idle machine. The halo
+lives outside the shell SVG for exactly this reason — rotating a `<g>` inside
+it cost 0.9% CPU on its own, three times the whole budget, because it dirtied
+the filter graph every frame.
+
 ## Windows-specific notes
 
 Fullscreen and microphone detection run through a single long-lived PowerShell
@@ -128,11 +165,23 @@ they can be accepted or reversed on review.
    `require('chokidar')` would throw. It is bundled in `electron.vite.config.ts`;
    every other dependency stays external.
 
-7. **The overlay unmounts when hidden.** Measured: with the portrait's CSS
+7. **The overlay unmounts when hidden.** Measured: with the unit's CSS
    animations still running behind a hidden window, the renderer burned 2.9 s
    of CPU per 60 s idle — `backgroundThrottling: false` means Chromium will not
-   throttle it. Speech state is torn down 400 ms after the exit animation and
+   throttle it. Speech state is torn down 440 ms after the exit animation and
    animations are gated off, which took idle CPU from 0.80% to 0.08%.
+
+8. **Speech segments replace each other rather than accumulating.** The
+   redesign spec says segments display "sequentially, never all at once",
+   which reads either way. Replacement is the reading that makes the
+   instantaneous mid-phrase break land as a glitch instead of as more text
+   arriving.
+
+9. **Dialogue carries four text shadows, not the two specified.** The
+   specified pair does not keep near-white glyphs legible on a white
+   document — neither shadow hugs the glyph edge closely enough to separate it
+   from the page. Two hairline shadows sit in front of them. Checked on all
+   three grounds in the design harness.
 
 ## Measured performance (packaged build, idle)
 
@@ -142,6 +191,7 @@ they can be accepted or reversed on review.
 | Idle RAM, private bytes (commit) | | | 189.0 MB |
 | Idle RAM, sum of working sets | | | 311.1 MB |
 | Idle CPU, 60 s average | < 0.3% | > 1% | **0.114%** |
+| Renderer CPU, overlay visible | < 0.3% | > 1% | **0.251%** |
 | Cold start to tray | < 2.5 s | > 5 s | **0.72 s** |
 
 Three memory figures, because the choice of metric decides whether this passes.
@@ -149,3 +199,11 @@ The sum of working sets double-counts pages shared between the four Chromium
 processes, so it overstates the real cost; private working set — the number
 Task Manager shows in its Memory column — is 80.7 MB. On any reading except
 the most pessimistic one, the budget is met.
+
+The overlay-visible figure is the renderer process with a phrase on screen and
+every idle animation running — bob, optic breathe, light spill and halo — with
+`backgroundThrottling: false`. It was measured in the design harness rather
+than by waiting for a monitor to fire; the harness renders the same components
+with the same animations. Per-layer: 0.03% with all animation off, and roughly
+0.22% for any one of them, because they share a single compositor frame loop
+rather than adding up.

@@ -2,6 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PhraseSegment, SpeechShowPayload } from '@shared/types';
 import { MS_PER_CHAR } from '@shared/speechTiming';
 
+/**
+ * §5 — the unit slides in, the name label follows at +120 ms, and the text
+ * begins typing at +200 ms. Typing therefore starts late rather than starting
+ * on time behind an invisible element, which would swallow the first few
+ * characters of the reveal.
+ */
+const ENTRY_DELAY_MS = 200;
+
 export interface SpeechView {
   speech: SpeechShowPayload | null;
   visible: boolean;
@@ -10,6 +18,8 @@ export interface SpeechView {
   /** Characters revealed of the active segment. */
   revealed: number;
   reducedMotion: boolean;
+  /** False until the entry animation has played far enough to type. */
+  armed: boolean;
   dismiss: () => void;
 }
 
@@ -29,10 +39,12 @@ export function useSpeech(): SpeechView {
   const [activeIndex, setActiveIndex] = useState(0);
   const [revealed, setRevealed] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(prefersReducedMotion);
+  const [armed, setArmed] = useState(false);
 
   const finishTimer = useRef<number | null>(null);
   const typeTimer = useRef<number | null>(null);
   const teardownTimer = useRef<number | null>(null);
+  const armTimer = useRef<number | null>(null);
   const speechRef = useRef<SpeechShowPayload | null>(null);
 
   const clearTimers = useCallback(() => {
@@ -47,6 +59,10 @@ export function useSpeech(): SpeechView {
     if (teardownTimer.current !== null) {
       window.clearTimeout(teardownTimer.current);
       teardownTimer.current = null;
+    }
+    if (armTimer.current !== null) {
+      window.clearTimeout(armTimer.current);
+      armTimer.current = null;
     }
   }, []);
 
@@ -64,7 +80,10 @@ export function useSpeech(): SpeechView {
       setSpeech(null);
       setActiveIndex(0);
       setRevealed(0);
-    }, 400);
+      setArmed(false);
+      // §5 exit: the text fades for 140 ms, then the unit slides out over
+      // 260 ms. Unmounting before that finishes would clip the slide.
+    }, 440);
   }, []);
 
   const dismiss = useCallback(() => {
@@ -97,6 +116,11 @@ export function useSpeech(): SpeechView {
       setActiveIndex(0);
       setRevealed(0);
       setVisible(true);
+      setArmed(false);
+      armTimer.current = window.setTimeout(() => {
+        armTimer.current = null;
+        setArmed(true);
+      }, ENTRY_DELAY_MS);
 
       // Report completion at exactly the duration main computed, so the two
       // sides can never drift.
@@ -133,7 +157,7 @@ export function useSpeech(): SpeechView {
 
   /* ---- type-on reveal --------------------------------------------- */
   useEffect(() => {
-    if (!speech || !visible || !activeSegment) return;
+    if (!speech || !visible || !activeSegment || !armed) return;
     const isLast = activeIndex >= speech.segments.length - 1;
 
     if (reducedMotion) {
@@ -159,7 +183,15 @@ export function useSpeech(): SpeechView {
         typeTimer.current = null;
       }
     };
-  }, [speech, visible, activeSegment, activeIndex, revealed, reducedMotion]);
+  }, [speech, visible, activeSegment, activeIndex, revealed, reducedMotion, armed]);
 
-  return { speech, visible, activeIndex, revealed: effectiveRevealed, reducedMotion, dismiss };
+  return {
+    speech,
+    visible,
+    activeIndex,
+    revealed: effectiveRevealed,
+    reducedMotion,
+    armed,
+    dismiss
+  };
 }

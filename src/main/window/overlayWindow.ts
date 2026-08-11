@@ -10,8 +10,11 @@ import { loadPage } from './rendererUrl';
 
 const log = createLogger('overlay');
 
-/** Long enough for the 180 ms exit animation to finish before the window goes. */
-const EXIT_ANIMATION_MS = 260;
+/**
+ * Long enough for the whole exit to finish before the window goes: the text
+ * fades over 140 ms and only then does the unit slide out over 260 ms (§5).
+ */
+const EXIT_ANIMATION_MS = 420;
 
 export class OverlayWindow implements OverlayPresenter {
   private win: BrowserWindow | null = null;

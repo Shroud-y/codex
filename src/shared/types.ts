@@ -7,6 +7,28 @@ export interface PhraseSegment {
   mode: SpeechMode;
 }
 
+/** Geometric glyph shown in the toast's left cell. Drawn in code (§1). */
+export type ToastGlyph = 'build' | 'download' | 'disk' | 'clock' | 'alert';
+
+/**
+ * §6 — an event carrying a concrete fact, rendered as the only framed element
+ * in the overlay.
+ *
+ * The renderer is ready for a toast that arrives *without* speech, so that a
+ * `notable` event can surface during quiet hours or fullscreen suppression
+ * without breaking silence. Making that happen needs the speech director to
+ * resolve an event to `{ toast }`, `{ speech }` or both, which is a change to
+ * working Phase 1 logic and is deliberately not part of this task — main never
+ * populates this field yet.
+ */
+export interface ToastPayload {
+  id: string;
+  text: string;
+  glyph: ToastGlyph;
+  /** How long the toast holds before fading, independent of the speech. */
+  durationMs: number;
+}
+
 /** main → renderer: 'speech:show' */
 export interface SpeechShowPayload {
   speechId: string;
@@ -14,6 +36,10 @@ export interface SpeechShowPayload {
   durationMs: number;
   /** Present only when a voice engine has audio for this phrase. */
   audioUrl?: string;
+  /** Which character is speaking. Absent means the default persona. */
+  personaId?: string;
+  /** Accompanying toast, if the event carried a concrete fact. */
+  toast?: ToastPayload;
 }
 
 /** main → renderer: 'state:update' */

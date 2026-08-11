@@ -1,0 +1,181 @@
+/* Only layers 0, 6, 7 and 9 animate, and only `opacity` and `transform`
+   (§4.3). Animating a filter primitive or a gradient stop re-evaluates the
+   whole filter graph every frame and shows up as permanent GPU load on an
+   idle machine — this component is on screen with `backgroundThrottling`
+   disabled, so that cost never goes away. */
+
+/* Carries the persona palette as inline custom properties, nothing else. */
+.root {
+  position: relative;
+  display: block;
+}
+
+.unit {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The bob. Transform only, on the element rather than inside the SVG, so it
+     composites without touching a single SVG attribute. */
+  animation: bob var(--bob-ms, 5000ms) ease-in-out infinite;
+  will-change: transform;
+}
+
+.unit[data-idle='still'] {
+  animation: none;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Bloom and the atmospheric halo draw well outside the viewBox. */
+  overflow: visible;
+  /* Contain `screen` and `overlay` blending inside the unit — otherwise the
+     spill layer blends against the transparent desktop and disappears. */
+  isolation: isolate;
+}
+
+/* Layers 1–5 and 8: rasterised once and left alone. */
+.static {
+  will-change: transform;
+}
+
+/* Layer 6 — the emissive stack breathes. */
+.optics {
+  animation: breathe 2400ms ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* Layer 7 — spill tracks the optics exactly; if it lagged, the light would
+   appear to leave the object before the object dimmed. */
+.spill {
+  animation: breathe 2400ms ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* Layer 9 — furniture, in its own composited layer above the shell SVG.
+   `.haloClip` is static and carries the "everything except the shell" clip;
+   only `.haloSpin` moves, and it moves by transform alone. */
+.haloClip {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.haloSpin {
+  position: absolute;
+  inset: 0;
+  animation: spin 90000ms linear infinite;
+  will-change: transform;
+}
+
+.haloSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* While speaking the optics run a little hotter and a little faster — the
+   only cue that ties the unit to the text. */
+.unit[data-speaking='true'] .optics,
+.unit[data-speaking='true'] .spill {
+  animation-duration: 1300ms;
+}
+
+/* ---- rage (§5) ---------------------------------------------------- */
+
+.unit[data-mode='rage'] {
+  --p-light: var(--p-rage);
+  --p-light-core: var(--p-rage-core);
+  --p-light-dim: #7a1f10;
+}
+
+.unit[data-mode='rage'] .optics,
+.unit[data-mode='rage'] .spill {
+  animation: flicker 190ms steps(3, end) infinite;
+}
+
+/* The halo rotation jumps rather than accelerating smoothly. */
+.unit[data-mode='rage'] .haloSpin {
+  animation: spin 2600ms steps(9, end) infinite;
+}
+
+/* ---- whisper ------------------------------------------------------- */
+
+.unit[data-mode='whisper'] .optics,
+.unit[data-mode='whisper'] .spill {
+  animation-duration: 6000ms;
+  opacity: 0.7;
+}
+
+/* ---- §4.1 unlit review mode ---------------------------------------- */
+
+/* Everything emissive, bloomed or spilled goes away. What is left has to
+   read as a solid, lit, three-dimensional object on its own. */
+.unit[data-unlit='true'] .emissive {
+  display: none;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, calc(var(--bob-px, 4px) * -1), 0);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes flicker {
+  0% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0.55;
+  }
+  66% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unit,
+  .optics,
+  .spill,
+  .haloSpin,
+  .unit[data-mode='rage'] .optics,
+  .unit[data-mode='rage'] .spill,
+  .unit[data-mode='rage'] .haloSpin {
+    animation: none;
+  }
+
+  /* Still needs to look lit, just not moving. */
+  .optics,
+  .spill {
+    opacity: 1;
+  }
+}
