@@ -42,6 +42,14 @@ void main() {
 
   vec3 c = toSRGB(aces(hdr));
 
+  /* The canvas is the whole world this eye has: a glow that would spill past
+     it is simply not there, and without a fade that absence is a straight
+     line. Six per cent of the shorter axis is enough to turn the cut into a
+     falloff, and the eye itself stops well inside it. */
+  vec2 fade = smoothstep(vec2(0.0), vec2(0.06), uv)
+            * smoothstep(vec2(0.0), vec2(0.06), 1.0 - uv);
+  c *= fade.x * fade.y;
+
   // A slow falloff banks visibly at 8 bits. One LSB of noise removes the
   // contour rings and costs nothing.
   float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);

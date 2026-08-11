@@ -5,7 +5,7 @@ import { SKIN_IDS } from '@shared/types';
 import './styles/panel.css';
 
 const FREQUENCIES: FrequencyProfile[] = ['chatty', 'balanced', 'reserved', 'rare'];
-const SKIN_LABELS: Record<SkinId, string> = { ovoid: 'Ovoid', aperture: 'Aperture' };
+const SKIN_LABELS: Record<SkinId, string> = { eye: 'Eye' };
 const MONITOR_LABELS: Record<string, string> = {
   system: 'System (CPU, memory, disk, thermal, battery)',
   process: 'Processes (watchlist)',

@@ -8,9 +8,9 @@ const log = createLogger('settings');
 const clockSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 const settingsSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   startWithSystem: z.boolean(),
-  skinId: z.enum(['ovoid', 'aperture']),
+  skinId: z.enum(['eye']),
   frequencyProfile: z.enum(['chatty', 'balanced', 'reserved', 'rare']),
   quietHours: z.object({ enabled: z.boolean(), from: clockSchema, to: clockSchema }),
   suppressOnFullscreen: z.boolean(),
@@ -48,9 +48,9 @@ export const DEFAULT_WATCHED_PROCESSES = [
 
 export function defaultSettings(downloadsDir: string): Settings {
   return {
-    version: 1,
+    version: 2,
     startWithSystem: true,
-    skinId: 'ovoid',
+    skinId: 'eye',
     frequencyProfile: 'balanced',
     quietHours: { enabled: true, from: '23:00', to: '08:00' },
     suppressOnFullscreen: true,
@@ -63,11 +63,17 @@ export function defaultSettings(downloadsDir: string): Settings {
 }
 
 /**
- * Migrations run oldest → newest. Version 1 is the first shipped shape, so
- * there is nothing to migrate yet; the seam exists so version 2 costs nothing.
+ * Migrations run oldest → newest.
+ *
+ * Version 2 drops the `ovoid` and `aperture` skins for a single `eye`. Without
+ * this the stored `skinId` would fail validation, and a failed parse discards
+ * the *whole* file — an appearance change would silently take the user's quiet
+ * hours, watch lists and folders with it.
  */
 type RawSettings = Record<string, unknown>;
-const MIGRATIONS: Record<number, (input: RawSettings) => RawSettings> = {};
+const MIGRATIONS: Record<number, (input: RawSettings) => RawSettings> = {
+  1: (input) => ({ ...input, version: 2, skinId: 'eye' })
+};
 
 export function migrate(raw: RawSettings): RawSettings {
   let current = raw;
@@ -100,7 +106,7 @@ export class SettingsStore {
   }
 
   update(patch: Partial<Settings>): Settings {
-    const merged = { ...this.value, ...patch, version: 1 as const };
+    const merged = { ...this.value, ...patch, version: 2 as const };
     const parsed = settingsSchema.safeParse(merged);
     if (!parsed.success) {
       log.warn(`rejected settings update: ${parsed.error.issues.map((i) => i.message).join('; ')}`);
@@ -121,7 +127,7 @@ export class SettingsStore {
     try {
       const raw = JSON.parse(readFileSync(this.filePath, 'utf8')) as RawSettings;
       const migrated = migrate(raw);
-      const parsed = settingsSchema.safeParse({ ...this.fallback, ...migrated, version: 1 });
+      const parsed = settingsSchema.safeParse({ ...this.fallback, ...migrated });
       if (!parsed.success) {
         log.warn('settings file invalid, falling back to defaults for the bad fields');
         return this.fallback;

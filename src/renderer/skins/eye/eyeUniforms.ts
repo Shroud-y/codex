@@ -2,9 +2,8 @@ import type { SpeechMode } from '@shared/types';
 import { CANVAS, CENTRE, EYE } from './geometry';
 
 /**
- * Everything about the shader eye that is arithmetic rather than GL, kept
- * separate so it can be tested without a canvas — the same reason the
- * aperture's path geometry lives in `geometry.ts`.
+ * Everything about the eye that is arithmetic rather than GL, kept separate so
+ * it can be tested without a canvas.
  */
 
 /** One frame's worth of shader inputs. Names match the uniforms exactly. */
@@ -28,9 +27,9 @@ export interface EyeUniforms {
 
 /**
  * The prototype was tuned against a lens of half-width 0.34 in units of half
- * the viewport height. This eye is smaller — 31 px across a 175 px canvas — so
- * the values that carry a length have to come with it, or the noise reads at
- * the wrong scale and the membrane comes out far too thick.
+ * the viewport height. This one is 0.31, so the values that carry a length
+ * come with it — otherwise the noise reads at the wrong scale and the membrane
+ * comes out too thick.
  *
  * Written as `PROTOTYPE_VALUE * SCALE` rather than as pre-multiplied constants,
  * so the numbers stay traceable to the look that was signed off.
@@ -56,17 +55,11 @@ export const EYE_CENTRE: readonly [number, number] = [
 ];
 
 /*
- * Three of these are deliberately below what the prototype used, because the
- * prototype had a whole 1080p screen to bloom into and this eye is 62 px wide
- * inside a 150 px unit:
- *
- * - the wide bloom veiled the ribs and the ring at prototype strength, which
- *   collapsed the three depth planes the skin exists to keep apart, and it
- *   reached the canvas edge, where the blur clamps and leaves a visible
- *   rectangle of haze;
- * - dispersion is a fraction of the shape, so it survived the port unchanged
- *   in *relative* terms — but at 22 px tall that fraction is a two-pixel
- *   colour fringe around the whole lens instead of a split at the tips.
+ * Close to the prototype, because the eye is now close to the prototype's
+ * proportions. The bloom strengths are the exception and stay below it: the
+ * prototype had a whole 1080p screen to bloom into, and this canvas is 150 x
+ * 175, where a glow that reaches the edge is clamped by the blur and leaves a
+ * visible rectangle of haze.
  */
 const BASE: EyeUniforms = {
   uWarpAmp: 0.034 * SCALE,
@@ -74,15 +67,15 @@ const BASE: EyeUniforms = {
   uNoiseScale: 6.4 / SCALE,
   uThickness: 0.006 * SCALE,
   uThickVar: 0.62,
-  uCoreIntensity: 1.3,
+  uCoreIntensity: 1.45,
   uCoreRadius: 0.2,
-  uDispersion: 0.012,
-  uInterior: 0.6,
+  uDispersion: 0.028,
+  uInterior: 0.85,
   uOpenness: 1,
-  uRadiusA: 1.1,
-  uStrengthA: 0.4,
-  uRadiusB: 1.3,
-  uStrengthB: 0.26,
+  uRadiusA: 1.15,
+  uStrengthA: 0.5,
+  uRadiusB: 1.35,
+  uStrengthB: 0.42,
   uExposure: 1
 };
 
@@ -104,9 +97,9 @@ const RAGE: EyeUniforms = {
   uNoiseScale: 9.8 / SCALE,
   uThickness: 0.0085 * SCALE,
   uThickVar: 0.85,
-  uCoreIntensity: 1.15,
+  uCoreIntensity: 1.3,
   uCoreRadius: 0.07,
-  uDispersion: 0.012
+  uDispersion: 0.028
 };
 
 /** §3.1 — whisper dims rather than changes shape. */
@@ -176,14 +169,14 @@ export function hexToRgb(hex: string): [number, number, number] {
 }
 
 /**
- * How many half-resolution bloom levels are worth allocating. The prototype
- * ran four at 1080p; on a 150 × 175 canvas a fourth level is 9 × 10 pixels,
- * which both upsamples into visible blocks and spreads the glow far enough to
- * hit the canvas edge, where the blur clamps and leaves a bright rectangle.
- * The ladder stops while the levels are still big enough to carry a smooth
- * falloff and small enough to stay inside the unit.
+ * How many half-resolution bloom levels are worth allocating.
+ *
+ * The prototype ran four at 1080p. Here the limit is not blockiness but reach:
+ * each level doubles how far the glow spreads, and a glow wider than the
+ * canvas gets cut off in a straight line no matter how it is faded. Two levels
+ * put the widest bloom at roughly the margin the eye leaves around itself.
  */
-export function bloomLevels(width: number, height: number, minSize = 24): number {
+export function bloomLevels(width: number, height: number, minSize = 48): number {
   let levels = 0;
   let w = width;
   let h = height;

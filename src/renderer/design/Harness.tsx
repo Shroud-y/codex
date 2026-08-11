@@ -30,7 +30,7 @@ const GROUNDS: { id: Ground; label: string }[] = [
 export default function Harness(): JSX.Element {
   const [sceneId, setSceneId] = useState(SCENES[0]?.id ?? '');
   const [personaId, setPersonaId] = useState(personaIds()[0] ?? 'codex');
-  const [skinId, setSkinId] = useState<SkinId>('ovoid');
+  const [skinId, setSkinId] = useState<SkinId>('eye');
   const [ground, setGround] = useState<Ground>('dark');
   const [shot, setShot] = useState<string | null>(null);
 

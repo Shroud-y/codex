@@ -23,7 +23,7 @@ export class OverlayWindow implements OverlayPresenter {
   private offsets = { offsetX: 0, offsetY: 0 };
   private ready = false;
   private pending: SpeechShowPayload | null = null;
-  private skinId: SkinId = 'ovoid';
+  private skinId: SkinId = 'eye';
   private runtimeState: Omit<StatePayload, 'skinId'> = { muted: false, snoozedUntil: null };
 
   create(preloadPath: string): BrowserWindow {

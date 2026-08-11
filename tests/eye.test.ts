@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CANVAS, CENTRE, EYE } from '@renderer/skins/aperture/geometry';
+import { CANVAS, CENTRE, EYE } from '@renderer/skins/eye/geometry';
 import {
   EYE_CENTRE,
   EYE_MOTION,
@@ -8,12 +8,12 @@ import {
   bloomLevels,
   hexToRgb,
   opennessAt
-} from '@renderer/skins/aperture/eyeUniforms';
+} from '@renderer/skins/eye/eyeUniforms';
 
 /**
- * The shader eye's arithmetic, which is the part that can be wrong without
- * anyone noticing on screen — a slightly wrong scale factor just looks like a
- * tuning choice, and the aperture holding still in rage looks deliberate.
+ * The eye's arithmetic, which is the part that can be wrong without anyone
+ * noticing on screen — a slightly wrong scale factor just looks like a tuning
+ * choice, and the aperture holding still in rage looks deliberate.
  */
 
 const at = (elapsedMs: number, over: Partial<Parameters<typeof opennessAt>[0]> = {}) =>
@@ -25,10 +25,16 @@ describe('shape mapping', () => {
     expect(EYE_SHAPE[1]).toBeCloseTo(EYE.height / 2 / CANVAS.height, 10);
   });
 
-  it('offsets the optic centre, flipping y for gl_FragCoord', () => {
+  it('sits dead centre, now that the eye is the whole unit', () => {
+    expect(EYE_CENTRE[0]).toBe(0);
+    expect(EYE_CENTRE[1]).toBe(-0);
+  });
+
+  it('still derives the centre from the geometry rather than assuming zero', () => {
+    // The offset happens to be zero; the mapping that produced it is what the
+    // shader depends on, and it has to keep flipping y for gl_FragCoord.
     expect(EYE_CENTRE[0]).toBeCloseTo((CENTRE.x - CANVAS.width / 2) / CANVAS.height, 10);
-    // The optic sits above the canvas centre, so the GL-space offset is negative.
-    expect(EYE_CENTRE[1]).toBeLessThan(0);
+    expect(EYE_CENTRE[1]).toBeCloseTo(-(CENTRE.y - CANVAS.height / 2) / CANVAS.height, 10);
   });
 
   it('keeps the whole lens inside the canvas', () => {
@@ -118,12 +124,24 @@ describe('hexToRgb', () => {
 });
 
 describe('bloomLevels', () => {
-  it('stops before the levels get small enough to block up or reach the edge', () => {
-    expect(bloomLevels(CANVAS.width, CANVAS.height)).toBe(2);
+  /* The skin always renders at twice the CSS size, so this is the call that
+     decides what actually ships. Each level doubles how far the glow spreads,
+     and a glow wider than the canvas is cut off in a straight line however it
+     is faded — two levels put the widest bloom at about the margin the eye
+     leaves around itself. */
+  const RENDERED = [CANVAS.width * 2, CANVAS.height * 2] as const;
+
+  it('stops at two levels for the size this skin renders at', () => {
+    expect(bloomLevels(...RENDERED)).toBe(2);
   });
 
-  it('adds a level when the backing store is doubled for a retina display', () => {
-    expect(bloomLevels(CANVAS.width * 2, CANVAS.height * 2)).toBe(3);
+  it('keeps the widest level well clear of one texel per several pixels', () => {
+    const widest = Math.min(RENDERED[0], RENDERED[1]) >> bloomLevels(...RENDERED);
+    expect(widest).toBeGreaterThanOrEqual(48);
+  });
+
+  it('adds a level only when there is real room for one', () => {
+    expect(bloomLevels(1920, 1080)).toBe(3);
   });
 
   it('always returns at least one level, however small the canvas', () => {

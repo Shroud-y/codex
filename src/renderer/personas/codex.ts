@@ -22,7 +22,7 @@ export const codex: Persona = {
     rageCore: '#FFB199'
   },
 
-  defaultSkin: 'ovoid',
+  defaultSkin: 'eye',
 
   /* Not yet consumed — main still loads a single bank and a single voice. */
   bankPath: 'resources/phrases/bank.json',

@@ -1,68 +1,34 @@
 import type { SkinId } from '@shared/types';
 import type { Skin } from './types';
-import OvoidSkin, { OVOID_CANVAS, OVOID_OPTIC_CENTRE } from './ovoid/OvoidSkin';
-import ApertureSkin, { APERTURE_CANVAS, APERTURE_OPTIC_CENTRE } from './aperture/ApertureSkin';
-import { EYE_MOTION } from './aperture/eyeUniforms';
+import EyeSkin, { EYE_CANVAS, EYE_OPTIC_CENTRE } from './eye/EyeSkin';
+import { EYE_MOTION, MODE_UNIFORMS } from './eye/eyeUniforms';
 
 export * from './types';
 
 /**
  * §3.0 — the registry. Adding a skin is one new folder and one entry here;
  * nothing else in the renderer changes, and nothing outside this file needs to
- * know how many skins exist.
+ * know how many skins exist. There is one at the moment, and the indirection
+ * still earns its place: it is what keeps the persona, the settings panel and
+ * the overlay from naming a component directly.
  */
 const REGISTRY: Record<SkinId, Skin> = {
-  ovoid: {
-    id: 'ovoid',
-    label: 'Ovoid',
-    component: OvoidSkin,
-    canvas: OVOID_CANVAS,
-    opticCenter: OVOID_OPTIC_CENTRE,
+  eye: {
+    id: 'eye',
+    label: 'Eye',
+    component: EyeSkin,
+    canvas: EYE_CANVAS,
+    opticCenter: EYE_OPTIC_CENTRE,
+    /* The shader's blowout ramps whatever red it is given through orange and
+       yellow on the way to white, and the persona's #FF5A3C is already part
+       orange — with the warm red in, rage read as fire rather than as anger.
+       Stated as data rather than hardcoded in the component, which is what
+       `paletteOverrides` is for. */
+    paletteOverrides: { rage: '#E80808', rageCore: '#FF5A5A' },
     motion: {
       idle: [
         { target: 'unit', kind: 'bob', amplitude: 4, periodMs: 5000 },
-        { target: 'optics', kind: 'breathe', amplitude: 0.18, periodMs: 2400 },
-        { target: 'halo', kind: 'spin', amplitude: 360, periodMs: 90_000 }
-      ],
-      glitch: {
-        frameDeg: 0,
-        ringDeg: 0,
-        eyeScaleY: 1,
-        jitterPx: 2,
-        fractureOpacity: 0,
-        splitPx: 2,
-        splitMs: 220
-      }
-    }
-  },
-
-  aperture: {
-    id: 'aperture',
-    label: 'Aperture',
-    component: ApertureSkin,
-    canvas: APERTURE_CANVAS,
-    opticCenter: APERTURE_OPTIC_CENTRE,
-    /* The persona's gold is tuned for a painted shell. On bare machined ribs
-       it reads decorative against a cool desktop, so this skin pulls the
-       saturation down and adds grey. Stated as data rather than hardcoded in
-       the component, which is exactly what `paletteOverrides` is for.
-
-       The rage red is colder here for the same reason. The persona's #FF5A3C
-       is already part orange, and the shader eye's blowout ramps whatever it
-       is given through orange and yellow on the way to white — with the warm
-       red in, rage read as fire rather than as anger. */
-    paletteOverrides: {
-      trim: '#B49A4E',
-      trimLit: '#D8C486',
-      rage: '#E80808',
-      rageCore: '#FF5A5A'
-    },
-    motion: {
-      idle: [
-        { target: 'unit', kind: 'bob', amplitude: 4, periodMs: 5000 },
-        { target: 'frame', kind: 'oscillate', amplitude: 3, periodMs: 12_000 },
-        { target: 'ring', kind: 'spin', amplitude: -360, periodMs: 40_000 },
-        /* Declared here as before, but the shader eye is what performs it —
+        /* Declared here as before, but the shader is what performs it —
            `EYE_MOTION` is the single source and this entry reads from it, so
            the two cannot drift apart. */
         {
@@ -73,11 +39,14 @@ const REGISTRY: Record<SkinId, Skin> = {
         }
       ],
       glitch: {
-        frameDeg: 8,
-        ringDeg: -25,
-        eyeScaleY: 0.15,
+        /* No frame and no ring left to lose synchronisation with each other,
+           so rage is carried by the eye alone: it compresses to a slit, tears,
+           and the whole unit takes one chromatic split as it snaps. */
+        frameDeg: 0,
+        ringDeg: 0,
+        eyeScaleY: MODE_UNIFORMS.rage.uOpenness,
         jitterPx: 2,
-        fractureOpacity: 0.8,
+        fractureOpacity: 0,
         splitPx: 2,
         splitMs: 220
       }
@@ -85,7 +54,7 @@ const REGISTRY: Record<SkinId, Skin> = {
   }
 };
 
-export const DEFAULT_SKIN_ID: SkinId = 'ovoid';
+export const DEFAULT_SKIN_ID: SkinId = 'eye';
 
 /** Falls back rather than throwing — an unknown id must never blank the
  *  overlay, and settings can carry a value from a future build. */

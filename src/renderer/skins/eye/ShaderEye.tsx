@@ -16,19 +16,24 @@ import blurSrc from './shaders/blur.frag.glsl?raw';
 import compositeSrc from './shaders/composite.frag.glsl?raw';
 
 /**
- * The optic, rendered as light rather than drawn as a shape.
+ * The companion, rendered as light rather than drawn as a shape.
  *
  * §3.1 asks for a membrane of rendered light: a white core that is white
  * because of its intensity, colour only in the falloff, and a torn contour.
  * SVG cannot do the first of those — values clamp at 1.0, so a blowout has to
  * be painted white rather than produced — and the torn contour costs a
- * hand-authored anchor per notch. Both come out of a fragment shader for free,
- * so this one layer of the skin is a canvas. Every other layer is still SVG.
+ * hand-authored anchor per notch. Both come out of a fragment shader for free.
  *
  * The chain is: eye into an RGBA16F target where radiance runs past 1.0, a
  * ladder of half-resolution blurs for the two bloom taps, then a composite
  * that tonemaps and writes premultiplied alpha so the canvas stays transparent
  * where the field is dark.
+ *
+ * **There is no fallback.** While this was one layer of a mechanism, a machine
+ * without WebGL2 could keep an SVG lens and still show the rest. The eye is now
+ * the entire character, so there is nothing to fall back to and no half-measure
+ * worth carrying: if the context or the programs fail, the unit renders
+ * nothing and the failure is logged.
  */
 
 export interface ShaderEyeProps {
@@ -40,12 +45,6 @@ export interface ShaderEyeProps {
   reducedMotion: boolean;
   /** §4.1 review mode. CSS hides the layer; this stops it rendering as well. */
   unlit: boolean;
-  /**
-   * Called if the context or the programs fail after `shaderEyeSupported`
-   * said they would not. The skin then falls back to the SVG eye: a driver
-   * that fails at link time must not leave the companion without an optic.
-   */
-  onUnavailable: () => void;
 }
 
 /*
@@ -60,30 +59,6 @@ const RENDER_SCALE = 2;
 
 /** 30 fps. See the note in the loop: the eye's slowest motion is a 2.4 s cycle. */
 const FRAME_MS = 1000 / 30 - 1;
-
-/**
- * Whether this machine can run the eye at all. Cached: the probe costs a
- * context creation, and the answer cannot change within a session.
- */
-let supported: boolean | null = null;
-
-export function shaderEyeSupported(): boolean {
-  if (supported !== null) return supported;
-  try {
-    const probe = document.createElement('canvas');
-    const gl = probe.getContext('webgl2');
-    // Half-float render targets are not optional here: they are what holds
-    // radiance above 1.0, and without that there is no reason to be in a
-    // shader at all.
-    supported = Boolean(
-      gl && (gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'))
-    );
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
-  } catch {
-    supported = false;
-  }
-  return supported;
-}
 
 interface Target {
   tex: WebGLTexture;
@@ -148,7 +123,14 @@ function makeTarget(gl: WebGL2RenderingContext, w: number, h: number): Target | 
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  if (!complete) {
+    // A driver can advertise the extension and still refuse the format.
+    gl.deleteTexture(tex);
+    gl.deleteFramebuffer(fbo);
+    return null;
+  }
   return { tex, fbo, w, h };
 }
 
@@ -172,7 +154,7 @@ export default function ShaderEye(props: ShaderEyeProps): JSX.Element {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const fail = latest.current.onUnavailable;
+    const fail = (why: string): void => console.error('[eye] ' + why);
 
     const gl = canvas.getContext('webgl2', {
       alpha: true,
@@ -183,17 +165,26 @@ export default function ShaderEye(props: ShaderEyeProps): JSX.Element {
       powerPreference: 'low-power'
     });
     if (!gl) {
-      fail();
+      fail('no WebGL2 context');
       return;
     }
-    if (!gl.getExtension('EXT_color_buffer_float')) gl.getExtension('EXT_color_buffer_half_float');
+    /* Half-float render targets are not optional: they are what holds radiance
+       above 1.0, and without that there is no reason to be in a shader. With no
+       fallback left, the failure has to be named rather than silently produce
+       an incomplete framebuffer and an empty canvas. */
+    const floatTargets =
+      gl.getExtension('EXT_color_buffer_float') ?? gl.getExtension('EXT_color_buffer_half_float');
+    if (!floatTargets) {
+      fail('no half-float render targets');
+      return;
+    }
 
     const eye = link(gl, vertSrc, eyeSrc);
     const blur = link(gl, vertSrc, blurSrc);
     const composite = link(gl, vertSrc, compositeSrc);
     const vao = gl.createVertexArray();
     if (!eye || !blur || !composite || !vao) {
-      fail();
+      fail('shader programs failed to build');
       return;
     }
 
@@ -212,7 +203,7 @@ export default function ShaderEye(props: ShaderEyeProps): JSX.Element {
       if (ping && pong) levels.push([ping, pong]);
     }
     if (!scene || levels.length === 0) {
-      fail();
+      fail('could not allocate render targets');
       return;
     }
 

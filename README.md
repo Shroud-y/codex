@@ -87,8 +87,8 @@ point of the design.
 |---|---|
 | Palette, type, easing (all of it) | `src/renderer/styles/tokens.css` |
 | Skin registry | `src/renderer/skins/index.ts` |
-| `ovoid` skin | `src/renderer/skins/ovoid/` |
-| `aperture` skin | `src/renderer/skins/aperture/` |
+| `eye` skin — the companion | `src/renderer/skins/eye/` |
+| Its shaders | `src/renderer/skins/eye/shaders/` |
 | Skin dispatcher and shared wrapper | `src/renderer/components/CharacterUnit.tsx` |
 | Persona data | `src/renderer/personas/codex.ts` |
 | Bare dialogue text | `src/renderer/components/Dialogue.tsx` |
@@ -115,33 +115,48 @@ over white, mid grey, dark and a loaded screenshot, with unlit, greyscale,
 32 px and heavy-blur toggles — the four checks the unit has to pass. It needs
 no Electron, so it does not start the tray app or its monitors.
 
-**Anything that moves gets its own element.** Only layers 0, 6, 7 and the
-motion groups animate, and only by `opacity` and `transform`. Never animate a
-filter primitive, a gradient stop or a path `d`.
+**Anything that moves in the DOM gets its own element, and moves only by
+`opacity` and `transform`.** Never animate a filter primitive, a gradient stop
+or a path `d`. What is left of this after the shader is the unit's bob and the
+one-shot chromatic split on entering rage; everything else moves inside the
+canvas.
 
-The rule that matters most, learned twice: **do not animate a `<g>` inside an
-SVG that carries filters.** Chromium re-rasterises that SVG's whole filter
-graph every frame, permanently, on an idle machine. The ovoid's rotating halo
-cost 0.9% CPU on its own that way; the aperture's three moving groups cost
-1.61%. Both dropped to noise once each moving part became its own element with
-`will-change: transform` — which is why `aperture` is five stacked SVGs rather
-than one, and why the halo lives outside the shell's SVG.
+The rule that mattered most under SVG, kept here because it is why the skin
+looks the way it does: **do not animate a `<g>` inside an SVG that carries
+filters.** Chromium re-rasterises that SVG's whole filter graph every frame,
+permanently, on an idle machine — 0.9% CPU for one rotating halo, 1.61% for a
+mechanism with three moving groups. Every earlier skin was a stack of five
+elements to avoid it.
 
-**The aperture's eye is a WebGL canvas; every other layer is still SVG.** §3.1
-asks for a membrane of rendered light — a core that is white *because* of its
-intensity, colour only in the falloff, a torn contour. SVG cannot produce the
-first of those: values clamp at 1.0, so a blowout has to be painted white
-rather than emerge, and `feGaussianBlur` gives blur rather than bloom. The
-shader accumulates radiance in an RGBA16F target, blooms it down a ladder of
-half-resolution blurs, and tonemaps with ACES; the contour is a signed distance
-field displaced by fBm, so the tearing costs no hand-placed anchors. It writes
-premultiplied alpha, so the canvas stays transparent where the field is dark
-and the SVG layers beneath show through.
+**The companion is a fragment shader.** §3.1 asks for a membrane of rendered
+light — a core that is white *because* of its intensity, colour only in the
+falloff, a torn contour. SVG cannot produce the first of those: values clamp at
+1.0, so a blowout has to be painted white rather than emerge, and
+`feGaussianBlur` gives blur rather than bloom. The shader accumulates radiance
+in an RGBA16F target, blooms it down a ladder of half-resolution blurs, and
+tonemaps with ACES; the contour is a signed distance field displaced by fBm, so
+the tearing costs no hand-placed anchors. It writes premultiplied alpha, so the
+canvas stays transparent where the field is dark.
+
+That collapses the layer stack to one element. All the motion is inside the
+shader, so there is nothing for the compositor to animate and nothing to split
+apart — the rule above stops applying rather than being worked around.
 
 `prototype/shader-eye/` is the standalone harness this was chosen from — it
 runs with `node prototype/shader-eye/server.mjs` and imports nothing from the
-app. Machines without WebGL2 or half-float render targets keep the SVG eye, as
-do drivers that fail after the probe passes.
+app.
+
+**There is no fallback.** While the shader was one layer of a mechanism, a
+machine without WebGL2 could keep an SVG lens and still show the rest. The eye
+is now the whole character, so there is nothing to fall back to: if the context
+or the programs fail, the unit renders nothing and the failure is logged.
+
+**The bloom has to fit the canvas.** At 150 x 175 a glow wider than the unit is
+cut off in a straight line, and `CLAMP_TO_EDGE` makes it worse than that — an
+out-of-range tap re-samples the brightest thing near the border and builds a
+bright rectangle of haze around the whole unit. The blur drops out-of-range
+taps, the ladder stops at two levels, and the composite fades over the outer
+6%. All three are needed; each alone still leaves an edge.
 
 The costly part turned out not to be the shading. Capping the drawn frames
 under a deadline while still re-requesting every vsync moved renderer CPU by
@@ -238,9 +253,8 @@ they can be accepted or reversed on review.
 | Idle RAM, private bytes (commit) | | | 189.0 MB |
 | Idle RAM, sum of working sets | | | 311.1 MB |
 | Idle CPU, 60 s average | < 0.3% | > 1% | **0.114%** |
-| Renderer CPU, overlay visible (`ovoid`) | < 0.3% | > 1% | 0.33–0.50% |
-| Renderer CPU, overlay visible (`aperture`, shader eye) | < 0.3% | > 1% | 0.37–0.39% |
-| Renderer CPU, overlay visible (`aperture`, shader eye, rage) | < 0.3% | > 1% | 0.47% |
+| Renderer CPU, overlay visible (`eye`) | < 0.3% | > 1% | 0.36–0.38% |
+| Renderer CPU, overlay visible (`eye`, rage) | < 0.3% | > 1% | 0.54% |
 | Cold start to tray | < 2.5 s | > 5 s | **0.72 s** |
 
 Three memory figures, because the choice of metric decides whether this passes.
@@ -253,15 +267,19 @@ The overlay-visible figures are the renderer process with a phrase on screen
 and every idle animation running, `backgroundThrottling: false`, measured in
 the design harness at 1500 × 940 rather than by waiting for a monitor to fire.
 
-The aperture rows were re-measured after the eye became a shader, against
-`ovoid` at 0.15% in the same session as the control. The window has to be
-genuinely on screen for any of it to mean anything: a hidden Electron window
-throttles `requestAnimationFrame` to about 1 Hz and stops compositing, which
-reports the shader eye at 0.02% and every screenshot of it as a stale frame.
+These were measured after the companion became a shader. The last all-SVG skin
+measured 0.15% in the same session as a control, so the shader costs roughly
+0.2pp more than CSS-animated SVG did — for a layer that now replaces five.
+Rage costs more than normal because its noise runs at more octaves.
+
+The window has to be genuinely on screen for any of it to mean anything: a
+hidden Electron window throttles `requestAnimationFrame` to about 1 Hz and
+stops compositing, which reports the eye at 0.02% and hands back stale frames
+for every screenshot.
 
 Ranges, not points, because the number is not stable between runs: identical
-`ovoid` code measured 0.33% in one session and 0.50% an hour later, so ambient
-machine load moves it more than any code change here does.
+code measured 0.33% in one session and 0.50% an hour later, so ambient machine
+load moves it more than any code change here does.
 
 What *is* stable is the attribution. With every animation disabled the renderer
 costs **0.001%**; switching any single one back on takes it to within a few

@@ -47,9 +47,9 @@ export interface SpeechShowPayload {
  * is *what it looks like*. They are separate axes, so this crosses IPC on its
  * own rather than riding on the persona id.
  */
-export type SkinId = 'ovoid' | 'aperture';
+export type SkinId = 'eye';
 
-export const SKIN_IDS: readonly SkinId[] = ['ovoid', 'aperture'];
+export const SKIN_IDS: readonly SkinId[] = ['eye'];
 
 /** main → renderer: 'state:update' */
 export interface StatePayload {
@@ -81,7 +81,7 @@ export interface OverlaySettings {
 }
 
 export interface Settings {
-  version: 1;
+  version: 2;
   startWithSystem: boolean;
   /** Overrides the persona's default skin. */
   skinId: SkinId;
