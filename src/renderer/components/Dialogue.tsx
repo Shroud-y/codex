@@ -38,6 +38,10 @@ export default function Dialogue({
   // otherwise be rewritten on every revealed character for the whole life of
   // the segment. Carrying it only inside the entry window keeps the two
   // pseudo-elements out of the steady state entirely.
+  //
+  // `closedFor` is per-mount, and the mount is keyed on the speech id by the
+  // caller — a segment index alone would go stale, because a phrase that
+  // interrupts another reuses index 0 while this component is still alive.
   const [closedFor, setClosedFor] = useState<number | null>(null);
   const splitting = segment?.mode === 'rage' && !reducedMotion && closedFor !== segmentIndex;
 

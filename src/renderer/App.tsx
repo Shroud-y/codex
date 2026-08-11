@@ -62,6 +62,7 @@ export default function App(): JSX.Element {
         visible={view.visible}
         reducedMotion={view.reducedMotion}
         onDismiss={view.dismiss}
+        speechKey={speechId}
         toast={view.speech?.toast ?? null}
       />
       <audio

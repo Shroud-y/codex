@@ -13,6 +13,13 @@ export interface CompanionProps {
   visible: boolean;
   reducedMotion: boolean;
   onDismiss: () => void;
+  /**
+   * Identifies the current phrase. Entry effects are keyed on it, because an
+   * interrupting phrase reuses segment index 0 while the previous one is still
+   * mounted — without this the second consecutive `rage` opener would enter
+   * with no glitch at all.
+   */
+  speechKey?: string;
   /** Zone C is independent and may render with no speech at all (§3, §6). */
   toast?: ToastPayload | null;
   toastVisible?: boolean;
@@ -33,6 +40,7 @@ export default function Companion({
   visible,
   reducedMotion,
   onDismiss,
+  speechKey = '',
   toast = null,
   toastVisible = true,
   unlit = false
@@ -66,6 +74,7 @@ export default function Companion({
           <div className={styles.speechZone}>
             <div className={styles.dialogueSlot}>
               <Dialogue
+                key={speechKey}
                 segment={segment}
                 revealed={revealed}
                 segmentIndex={activeIndex}
@@ -81,14 +90,16 @@ export default function Companion({
       {/* Zone C — independent of the speech entirely. */}
       {toast ? (
         <div className={styles.toastSlot}>
-          <EventToast toast={toast} visible={visible && toastVisible} />
+          {/* Keyed too: a replacement toast must replay its entry slide
+              rather than swapping its text in place. */}
+          <EventToast key={toast.id} toast={toast} visible={visible && toastVisible} />
         </div>
       ) : null}
 
       {/* Three scanline tears sweep the whole overlay for 150 ms whenever a
           rage segment enters. Keyed on the segment so it re-fires per entry. */}
       {mode === 'rage' && !reducedMotion ? (
-        <div className={styles.tears} key={`tear-${activeIndex}`} aria-hidden="true">
+        <div className={styles.tears} key={`tear-${speechKey}-${activeIndex}`} aria-hidden="true">
           <span className={styles.tear} />
           <span className={styles.tear} />
           <span className={styles.tear} />

@@ -109,7 +109,6 @@ function OvoidUnit({ uid, persona, params, material }: OvoidUnitProps): JSX.Elem
     return {
       outline,
       seams,
-      trimT,
       trim: ovoidSeam(params, trimT, 0.24),
       // Noticeably thicker on the left (§4.5) — a partial run over the same arc.
       trimHeavy: ovoidSeamPart(params, trimT, 0.0, 0.46, 0.24),
@@ -129,8 +128,6 @@ function OvoidUnit({ uid, persona, params, material }: OvoidUnitProps): JSX.Elem
       optic: teardrop(opticW, optics.size),
       opticHousing: teardrop(opticW * 1.3, optics.size * 1.18),
       opticY,
-      opticW,
-      bellyY: yAt(params, params.bellyT),
       bellyHalf: halfWidth(params, params.bellyT)
     };
   }, [params, persona.optics]);
