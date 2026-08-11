@@ -1,46 +1,62 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC } from '@shared/ipc';
 import type { SpeechShowPayload, StatePayload } from '@shared/types';
 
 /**
  * §12 — the overlay's entire surface. Nothing else is exposed: no node, no
  * fs, no arbitrary ipc.
+ *
+ * The channel names are written out literally rather than imported from
+ * `@shared/ipc`: a *value* import shared with the other preload makes Rollup
+ * hoist it into a separate chunk, and a sandboxed preload cannot require a
+ * second file — it fails with "module not found" and the whole bridge silently
+ * never appears. `tests/preload.test.ts` fails if these drift from `IPC`.
+ * Type-only imports are erased at build time and are safe.
  */
+const CHANNEL = {
+  speechShow: 'speech:show',
+  speechHide: 'speech:hide',
+  speechInterrupt: 'speech:interrupt',
+  stateUpdate: 'state:update',
+  overlaySetInteractive: 'overlay:setInteractive',
+  speechFinished: 'speech:finished',
+  speechDismissed: 'speech:dismissed'
+} as const;
+
 const api = {
   onSpeechShow(handler: (payload: SpeechShowPayload) => void): () => void {
     const listener = (_event: unknown, payload: SpeechShowPayload): void => handler(payload);
-    ipcRenderer.on(IPC.speechShow, listener);
-    return () => ipcRenderer.off(IPC.speechShow, listener);
+    ipcRenderer.on(CHANNEL.speechShow, listener);
+    return () => ipcRenderer.off(CHANNEL.speechShow, listener);
   },
 
   onSpeechHide(handler: () => void): () => void {
     const listener = (): void => handler();
-    ipcRenderer.on(IPC.speechHide, listener);
-    return () => ipcRenderer.off(IPC.speechHide, listener);
+    ipcRenderer.on(CHANNEL.speechHide, listener);
+    return () => ipcRenderer.off(CHANNEL.speechHide, listener);
   },
 
   onSpeechInterrupt(handler: () => void): () => void {
     const listener = (): void => handler();
-    ipcRenderer.on(IPC.speechInterrupt, listener);
-    return () => ipcRenderer.off(IPC.speechInterrupt, listener);
+    ipcRenderer.on(CHANNEL.speechInterrupt, listener);
+    return () => ipcRenderer.off(CHANNEL.speechInterrupt, listener);
   },
 
   onStateUpdate(handler: (payload: StatePayload) => void): () => void {
     const listener = (_event: unknown, payload: StatePayload): void => handler(payload);
-    ipcRenderer.on(IPC.stateUpdate, listener);
-    return () => ipcRenderer.off(IPC.stateUpdate, listener);
+    ipcRenderer.on(CHANNEL.stateUpdate, listener);
+    return () => ipcRenderer.off(CHANNEL.stateUpdate, listener);
   },
 
   setInteractive(interactive: boolean): void {
-    ipcRenderer.send(IPC.overlaySetInteractive, Boolean(interactive));
+    ipcRenderer.send(CHANNEL.overlaySetInteractive, Boolean(interactive));
   },
 
   speechFinished(speechId: string): void {
-    ipcRenderer.send(IPC.speechFinished, { speechId: String(speechId) });
+    ipcRenderer.send(CHANNEL.speechFinished, { speechId: String(speechId) });
   },
 
   speechDismissed(speechId: string): void {
-    ipcRenderer.send(IPC.speechDismissed, { speechId: String(speechId) });
+    ipcRenderer.send(CHANNEL.speechDismissed, { speechId: String(speechId) });
   }
 };
 

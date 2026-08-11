@@ -170,7 +170,8 @@ async function bootstrap(): Promise<void> {
       uptimeMinutes: (now - bootAt) / 60_000,
       firstRun
     }),
-    logDebug: (message) => log.debug(message)
+    logDebug: (message) => log.debug(message),
+    logInfo: (message) => log.info(message)
   });
   directorRef.current = director;
   director.start();

@@ -47,6 +47,12 @@ class PanelWindow {
       this.win = null;
     });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    win.webContents.on('preload-error', (_event, preload, error) => {
+      log.error(`preload failed for ${this.page} (${preload}): ${error.message}`);
+    });
+    win.webContents.on('did-fail-load', (_event, code, description) => {
+      log.error(`${this.page} failed to load (${code} ${description})`);
+    });
 
     this.win = win;
     void loadPage(win, this.page).catch((err) =>

@@ -64,7 +64,10 @@ export interface SpeechDirectorDeps {
   overlay: OverlayPresenter;
   getSuppression: (now: number) => SuppressionState;
   getConditionContext: (now: number) => Pick<ConditionContext, 'uptimeMinutes' | 'firstRun'>;
+  /** Every drop, with its reason. Noisy by design. */
   logDebug?: (message: string) => void;
+  /** Lines actually spoken. Kept at info so packaged builds record them. */
+  logInfo?: (message: string) => void;
   rng?: Rng;
   now?: () => number;
 }
@@ -141,7 +144,12 @@ export class SpeechDirector {
     const label = `${request.origin}/${request.ruleId ?? request.groupId}`;
 
     const drop = (reason: DropReason, deferred = false): Decision => {
-      this.deps.logDebug?.(`[director] ${label} → ${deferred ? 'deferred' : 'dropped'} (${reason})`);
+      const message = `[director] ${label} → ${deferred ? 'deferred' : 'dropped'} (${reason})`;
+      // Ambient drops are the common case and would drown the log. A notable
+      // or urgent line going missing is rare and worth recording, otherwise a
+      // packaged build gives no way to find out why it stayed silent.
+      if (request.priority === 'ambient') this.deps.logDebug?.(message);
+      else this.deps.logInfo?.(message);
       return { said: false, reason, deferred };
     };
 
@@ -156,7 +164,8 @@ export class SpeechDirector {
     if (reasons.length > 0 && !request.bypassSuppression) {
       if (request.priority === 'ambient') return drop('suppressed');
       if (request.priority === 'notable') {
-        return this.defer(request, now, isDeferredRetry) ?? drop('suppressed', true);
+        // A retry blocked again is discarded, not re-queued — say so.
+        return this.defer(request, now, isDeferredRetry) ?? drop('suppressed', !isDeferredRetry);
       }
       // urgent falls through
     }
@@ -165,7 +174,7 @@ export class SpeechDirector {
     if (!request.bypassCooldowns && !this.deps.ledger.canFire(CooldownKey.global(), now)) {
       if (request.priority === 'ambient') return drop('globalCooldown');
       if (request.priority === 'notable') {
-        return this.defer(request, now, isDeferredRetry) ?? drop('globalCooldown', true);
+        return this.defer(request, now, isDeferredRetry) ?? drop('globalCooldown', !isDeferredRetry);
       }
     }
 
@@ -210,7 +219,7 @@ export class SpeechDirector {
     this.current = { speechId, phraseId: phrase.id, priority: request.priority };
     void this.perform(speechId, phrase);
 
-    this.deps.logDebug?.(`[director] ${label} → speaking "${phrase.id}"`);
+    this.deps.logInfo?.(`[director] ${label} → speaking "${phrase.id}"`);
     return { said: true, speechId, phraseId: phrase.id };
   }
 

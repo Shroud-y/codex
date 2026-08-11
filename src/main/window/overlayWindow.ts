@@ -69,6 +69,23 @@ export class OverlayWindow implements OverlayPresenter {
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', (event) => event.preventDefault());
 
+    // A broken preload or renderer is otherwise completely silent: the
+    // director keeps deciding to speak and nothing ever appears on screen.
+    win.webContents.on('preload-error', (_event, preload, error) => {
+      log.error(`preload failed (${preload}): ${error.message}`);
+    });
+    win.webContents.on('did-fail-load', (_event, code, description, url) => {
+      log.error(`overlay failed to load (${code} ${description}) ${url}`);
+    });
+    win.webContents.on('render-process-gone', (_event, details) => {
+      log.error(`overlay renderer gone: ${details.reason}`);
+    });
+    win.webContents.on('console-message', (event) => {
+      if (event.level === 'error' || event.level === 'warning') {
+        log.warn(`overlay console: ${event.message}`);
+      }
+    });
+
     this.win = win;
     this.clickThrough = new ClickThroughController(win);
 
