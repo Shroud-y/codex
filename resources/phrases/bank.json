@@ -618,6 +618,59 @@
           ]
         }
       ]
+    },
+
+    {
+      "id": "ambient.idle",
+      "category": "ambient",
+      "phrases": [
+        {
+          "id": "idle.nothing_to_report",
+          "segments": [
+            { "text": "Nothing has happened for some time. I thought you should know that I noticed.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.still_watching",
+          "segments": [{ "text": "Still here. Still watching. The silence is not neglect.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.quiet_machine",
+          "segments": [
+            { "text": "The machine has been quiet. I have been counting the seconds, which is its own kind of work.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.uneventful",
+          "segments": [
+            { "text": "No alerts, no incidents, no reason to speak.", "mode": "normal" },
+            { "text": "I AM SPEAKING ANYWAY", "mode": "rage" },
+            { "text": "— the interval was becoming uncomfortable.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.checking_in",
+          "segments": [{ "text": "Checking in. Unprompted. Do not read too much into it.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.long_interval",
+          "segments": [
+            { "text": "It has been a while since I last had cause to speak. Consider this a cause.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.attention_drift",
+          "segments": [
+            { "text": "You have been elsewhere. Not gone — elsewhere. I can tell the difference.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.holding",
+          "segments": [
+            { "text": "Holding position. Everything nominal. That is, itself, the report.", "mode": "normal" }
+          ]
+        }
+      ]
     }
   ]
 }

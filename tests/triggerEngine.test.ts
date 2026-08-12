@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { PhraseBankIndex, parsePhraseBank } from '@main/core/phraseBank';
 import { TriggerEngine, type TriggerRule } from '@main/core/triggerEngine';
 import { createEvent, eventTypeMatches } from '@main/core/events';
@@ -90,5 +91,23 @@ describe('TriggerEngine', () => {
     const engine = new TriggerEngine(bank, { rules: [rule], rng: () => 0 });
     const [candidate] = engine.match(createEvent('system.cpu.high', 'urgent', {}, 1), baseCtx);
     expect(candidate?.priority).toBe('urgent');
+  });
+});
+
+describe('the shipped phrase bank', () => {
+  it('has a group for every trigger rule', () => {
+    const raw = JSON.parse(readFileSync('resources/phrases/bank.json', 'utf8'));
+    const realBank = new PhraseBankIndex(parsePhraseBank(raw));
+    expect(new TriggerEngine(realBank).danglingRules()).toEqual([]);
+  });
+
+  it('gives the silence timer enough phrases to rotate through', () => {
+    const raw = JSON.parse(readFileSync('resources/phrases/bank.json', 'utf8'));
+    const realBank = new PhraseBankIndex(parsePhraseBank(raw));
+    const group = realBank.group('ambient.idle');
+    expect(group?.category).toBe('ambient');
+    // Fewer than this and the per-phrase cooldown exhausts the group faster
+    // than the silence timer comes round again.
+    expect(group?.phrases.length).toBeGreaterThanOrEqual(8);
   });
 });

@@ -16,6 +16,7 @@ import {
   type AppEvent
 } from './core/events';
 import {
+  CooldownKey,
   CooldownLedger,
   createDurationResolver,
   FREQUENCY_MULTIPLIER
@@ -223,7 +224,14 @@ async function bootstrap(): Promise<void> {
     system: new SystemMonitor(scheduler),
     process: new ProcessMonitor(scheduler, () => settingsStore.current.watchedProcesses),
     idle: idleMonitor,
-    schedule: new ScheduleMonitor(scheduler, () => idleMonitor.isIdle),
+    schedule: new ScheduleMonitor(
+      scheduler,
+      () => idleMonitor.isIdle,
+      // The `global` stamp is exactly "when Codex last spoke", and it is
+      // persisted, so a restart does not reset the silence timer.
+      () => ledger.lastFiredAt(CooldownKey.global()),
+      () => FREQUENCY_MULTIPLIER[settingsStore.current.frequencyProfile]
+    ),
     session: new SessionMonitor(),
     file: new FileMonitor(() => settingsStore.current.watchedFolders)
   };

@@ -90,6 +90,9 @@ export const TRIGGER_RULES: TriggerRule[] = [
   { id: 'schedule.hourly', on: 'schedule.hourly', groupId: 'time.hourly', chance: 0.25 },
   { id: 'schedule.workBreak', on: 'schedule.workBreak', groupId: 'wellbeing.break' },
   { id: 'schedule.uptime', on: 'schedule.uptimeMilestone', groupId: 'wellbeing.uptime' },
+  // No `chance`: the monitor's silence timer is already the gate, and rolling
+  // dice on top would turn "occasionally" into "almost never".
+  { id: 'schedule.quiet', on: 'schedule.quiet', groupId: 'ambient.idle' },
 
   // ---- files -------------------------------------------------------
   {

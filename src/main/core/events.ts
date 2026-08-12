@@ -39,6 +39,7 @@ export const EventType = {
   scheduleHourly: 'schedule.hourly',
   scheduleWorkBreak: 'schedule.workBreak',
   scheduleUptimeMilestone: 'schedule.uptimeMilestone',
+  scheduleQuiet: 'schedule.quiet',
 
   fileDownloadComplete: 'file.downloadComplete',
   fileBuildComplete: 'file.buildComplete'
@@ -74,6 +75,7 @@ export const EVENT_PRIORITY: Record<string, EventPriority> = {
   [EventType.scheduleHourly]: 'ambient',
   [EventType.scheduleWorkBreak]: 'notable',
   [EventType.scheduleUptimeMilestone]: 'ambient',
+  [EventType.scheduleQuiet]: 'ambient',
 
   [EventType.fileDownloadComplete]: 'notable',
   [EventType.fileBuildComplete]: 'notable'
