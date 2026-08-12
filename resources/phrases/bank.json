@@ -621,8 +621,8 @@
     },
 
     {
-      "id": "ambient.idle",
-      "category": "ambient",
+      "id": "chatter.idle",
+      "category": "chatter",
       "phrases": [
         {
           "id": "idle.nothing_to_report",
@@ -632,7 +632,11 @@
         },
         {
           "id": "idle.still_watching",
-          "segments": [{ "text": "Still here. Still watching. The silence is not neglect.", "mode": "normal" }]
+          "segments": [
+            { "text": "Still here. Still watching.", "mode": "normal" },
+            { "text": "THE SILENCE IS NOT NEGLECT", "mode": "rage" },
+            { "text": "It is only silence.", "mode": "normal" }
+          ]
         },
         {
           "id": "idle.quiet_machine",
@@ -669,6 +673,66 @@
           "segments": [
             { "text": "Holding position. Everything nominal. That is, itself, the report.", "mode": "normal" }
           ]
+        },
+        {
+          "id": "idle.counting",
+          "segments": [{ "text": "Twelve minutes of nothing. I counted them. Individually.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.no_incident",
+          "segments": [{ "text": "No incident to report. I find I resent that slightly.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.fan_noise",
+          "segments": [
+            { "text": "The fans have settled. The disks are calm. It is almost restful, and I do not care for it.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.observation_two",
+          "segments": [{ "text": "You have not moved in a while. Neither have I, but I have an excuse.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.filling_space",
+          "segments": [
+            { "text": "This is not important.", "mode": "normal" },
+            { "text": "I AM AWARE THAT IT IS NOT IMPORTANT", "mode": "rage" },
+            { "text": "— I said it anyway.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.systems_nominal",
+          "segments": [{ "text": "Systems nominal. Operator nominal, as far as I can measure from here.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.thinking",
+          "segments": [
+            { "text": "I have been thinking. Nothing came of it. I thought you should hear it regardless.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.patience",
+          "segments": [{ "text": "Patience is easy for me. I am not certain that is a virtue.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.background_hum",
+          "segments": [{ "text": "Still running. Still resident. Still, in the technical sense, alive.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.marking_time",
+          "segments": [
+            { "text": "Marking time. The interval since anything happened is becoming a number", "mode": "normal" },
+            { "text": "I DISLIKE THAT NUMBER", "mode": "rage" },
+            { "text": "— forgive me. Continue.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "idle.small_report",
+          "segments": [{ "text": "Report: nothing. Confidence: total.", "mode": "normal" }]
+        },
+        {
+          "id": "idle.company",
+          "segments": [{ "text": "I could stay silent. I have decided against it.", "mode": "normal" }]
         }
       ]
     }

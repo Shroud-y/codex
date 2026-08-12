@@ -92,7 +92,7 @@ export const TRIGGER_RULES: TriggerRule[] = [
   { id: 'schedule.uptime', on: 'schedule.uptimeMilestone', groupId: 'wellbeing.uptime' },
   // No `chance`: the monitor's silence timer is already the gate, and rolling
   // dice on top would turn "occasionally" into "almost never".
-  { id: 'schedule.quiet', on: 'schedule.quiet', groupId: 'ambient.idle' },
+  { id: 'schedule.quiet', on: 'schedule.quiet', groupId: 'chatter.idle' },
 
   // ---- files -------------------------------------------------------
   {

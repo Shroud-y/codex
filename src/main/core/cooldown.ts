@@ -91,6 +91,13 @@ export const DEFAULT_COOLDOWNS = {
   perPhrase: 4 * 60 * 60_000,
   categories: {
     ambient: 45 * 60_000,
+    /**
+     * The silence timer's own category. It is deliberately shorter than
+     * `ambient`: idle chatter is the only thing that fires with no external
+     * event, so sharing a cooldown with the greetings would cap it at the
+     * greeting rate and the timer could never come round.
+     */
+    chatter: 20 * 60_000,
     system: 20 * 60_000,
     process: 15 * 60_000,
     schedule: 60 * 60_000,

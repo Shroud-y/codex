@@ -52,27 +52,27 @@ describe('ScheduleMonitor — silence timer', () => {
     h.boot(0);
     h.setLastSpokeAt(0);
 
-    h.poll(44 * MINUTE);
+    h.poll(19 * MINUTE);
     expect(h.quiet).toHaveLength(0);
 
-    h.poll(45 * MINUTE);
+    h.poll(20 * MINUTE);
     expect(h.quiet).toHaveLength(1);
-    expect(h.quiet[0]!.payload).toMatchObject({ silentForMs: 45 * MINUTE });
+    expect(h.quiet[0]!.payload).toMatchObject({ silentForMs: 20 * MINUTE });
   });
 
   it('scales the threshold by the frequency multiplier', () => {
     const chatty = harness({ multiplier: 0.5 });
     chatty.boot(0);
     chatty.setLastSpokeAt(0);
-    chatty.poll(23 * MINUTE);
+    chatty.poll(10 * MINUTE);
     expect(chatty.quiet).toHaveLength(1);
 
     const rare = harness({ multiplier: 4 });
     rare.boot(0);
     rare.setLastSpokeAt(0);
-    rare.poll(23 * MINUTE);
+    rare.poll(10 * MINUTE);
     expect(rare.quiet).toHaveLength(0);
-    rare.poll(181 * MINUTE);
+    rare.poll(81 * MINUTE);
     expect(rare.quiet).toHaveLength(1);
   });
 
@@ -82,13 +82,13 @@ describe('ScheduleMonitor — silence timer', () => {
     h.boot(0);
     h.setLastSpokeAt(0);
 
-    h.poll(45 * MINUTE);
+    h.poll(20 * MINUTE);
     expect(h.quiet).toHaveLength(1);
 
-    for (let m = 46; m <= 54; m++) h.poll(m * MINUTE);
+    for (let m = 21; m <= 29; m++) h.poll(m * MINUTE);
     expect(h.quiet).toHaveLength(1);
 
-    h.poll(55 * MINUTE);
+    h.poll(30 * MINUTE);
     expect(h.quiet).toHaveLength(2);
   });
 
@@ -97,14 +97,14 @@ describe('ScheduleMonitor — silence timer', () => {
     h.boot(0);
     h.setLastSpokeAt(0);
 
-    h.poll(45 * MINUTE);
+    h.poll(20 * MINUTE);
     expect(h.quiet).toHaveLength(1);
 
-    h.setLastSpokeAt(45 * MINUTE);
-    h.poll(80 * MINUTE);
+    h.setLastSpokeAt(20 * MINUTE);
+    h.poll(35 * MINUTE);
     expect(h.quiet).toHaveLength(1);
 
-    h.poll(91 * MINUTE);
+    h.poll(41 * MINUTE);
     expect(h.quiet).toHaveLength(2);
   });
 
@@ -114,17 +114,17 @@ describe('ScheduleMonitor — silence timer', () => {
     h.setLastSpokeAt(0);
 
     // Three suppressed retries in a row emit three events...
-    h.poll(45 * MINUTE);
-    h.poll(55 * MINUTE);
-    h.poll(65 * MINUTE);
+    h.poll(20 * MINUTE);
+    h.poll(30 * MINUTE);
+    h.poll(40 * MINUTE);
     expect(h.quiet).toHaveLength(3);
 
     // ...and once Codex finally speaks, the run resets so the next stretch
     // starts fresh rather than counting as a continued retry.
-    h.setLastSpokeAt(65 * MINUTE);
-    h.poll(70 * MINUTE);
+    h.setLastSpokeAt(40 * MINUTE);
+    h.poll(45 * MINUTE);
     expect(h.quiet).toHaveLength(3);
-    h.poll(111 * MINUTE);
+    h.poll(61 * MINUTE);
     expect(h.quiet).toHaveLength(4);
   });
 
@@ -150,7 +150,7 @@ describe('ScheduleMonitor — silence timer', () => {
     h.poll(10 * 60 * MINUTE + MINUTE);
     expect(h.quiet).toHaveLength(0);
 
-    h.poll(10 * 60 * MINUTE + 45 * MINUTE);
+    h.poll(10 * 60 * MINUTE + 20 * MINUTE);
     expect(h.quiet).toHaveLength(1);
   });
 
@@ -159,7 +159,7 @@ describe('ScheduleMonitor — silence timer', () => {
     h.boot(0);
     h.setLastSpokeAt(500 * MINUTE); // stamp in the future
 
-    h.poll(45 * MINUTE);
+    h.poll(20 * MINUTE);
     expect(h.quiet).toHaveLength(1);
   });
 
@@ -168,9 +168,9 @@ describe('ScheduleMonitor — silence timer', () => {
     h.boot(0);
     h.setLastSpokeAt(undefined);
 
-    h.poll(44 * MINUTE);
+    h.poll(19 * MINUTE);
     expect(h.quiet).toHaveLength(0);
-    h.poll(45 * MINUTE);
+    h.poll(20 * MINUTE);
     expect(h.quiet).toHaveLength(1);
   });
 });

@@ -16,7 +16,7 @@ const UPTIME_MILESTONES_HOURS = [24, 72];
  * of apps produces no events at all and the companion is silent for hours.
  * Scaled by the frequency multiplier like every other cooldown.
  */
-const QUIET_BASE_MS = 45 * 60_000;
+const QUIET_BASE_MS = 20 * 60_000;
 /**
  * A quiet attempt that gets dropped (suppressed, on cooldown, every phrase
  * spent) leaves `lastSpokeAt` untouched, so without a debounce of its own the

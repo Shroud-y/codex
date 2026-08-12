@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { PhraseBankError, PhraseBankIndex, parsePhraseBank } from '@main/core/phraseBank';
 import { TRIGGER_RULES, TriggerEngine } from '@main/core/triggerEngine';
+import { DEFAULT_COOLDOWNS } from '@main/core/cooldown';
 
 const shippedBank = JSON.parse(
   readFileSync(join(process.cwd(), 'resources/phrases/bank.json'), 'utf8')
@@ -107,7 +108,10 @@ describe('the shipped bank', () => {
   });
 
   it('uses only known cooldown categories', () => {
-    const known = new Set(['ambient', 'system', 'process', 'schedule', 'wellbeing']);
+    // Derived, not duplicated: a category with no entry here silently falls
+    // back to `categoryDefault`, which is the kind of drift a hardcoded list
+    // in a test cannot catch.
+    const known = new Set(Object.keys(DEFAULT_COOLDOWNS.categories));
     for (const group of parsed.groups) expect(known).toContain(group.category);
   });
 
