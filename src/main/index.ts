@@ -45,6 +45,7 @@ import { OverlayWindow } from './window/overlayWindow';
 import { debugWindow, settingsWindow } from './window/panelWindows';
 import { CodexTray, isDevBuild, startTrayRefreshLoop } from './tray/tray';
 import { PresenceProbe } from './system/presenceProbe';
+import { processListerFor, systemQueriesFor } from './system/systemQueries';
 import { SettingsStore, defaultSettings } from './settings/settings';
 import { StateStore } from './settings/stateStore';
 import { configureLogger, createLogger } from './log/logger';
@@ -221,8 +222,14 @@ async function bootstrap(): Promise<void> {
   const idleMonitor = new IdleMonitor(scheduler);
 
   const monitors: Record<string, Monitor> = {
-    system: new SystemMonitor(scheduler),
-    process: new ProcessMonitor(scheduler, () => settingsStore.current.watchedProcesses),
+    // Both of these read the machine through the probe host that is already
+    // running — see `systemQueries` for what that replaced and why.
+    system: new SystemMonitor(scheduler, systemQueriesFor(probe)),
+    process: new ProcessMonitor(
+      scheduler,
+      () => settingsStore.current.watchedProcesses,
+      processListerFor(probe)
+    ),
     idle: idleMonitor,
     schedule: new ScheduleMonitor(
       scheduler,

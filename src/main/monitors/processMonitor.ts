@@ -1,4 +1,3 @@
-import si from 'systeminformation';
 import type { EventBus } from '../core/eventBus';
 import { EventType, createEvent } from '../core/events';
 import { createLogger } from '../log/logger';
@@ -8,6 +7,19 @@ const log = createLogger('monitor:process');
 
 const POLL_MS = 20_000;
 const LONG_RUNNING_MS = 4 * 60 * 60_000;
+
+/** Returns the running executables, or null when the reading is unavailable. */
+export type ProcessLister = () => Promise<Set<string> | null>;
+
+/**
+ * The watchlist is written `chrome.exe` and the reading comes back `chrome`.
+ * Comparing stems means neither spelling has to be the canonical one, and a
+ * user who types the extension — or forgets it — matches either way.
+ */
+export function processStem(name: string): string {
+  const lower = name.trim().toLowerCase();
+  return lower.endsWith('.exe') ? lower.slice(0, -'.exe'.length) : lower;
+}
 
 /**
  * §9.2 — diff a set of running executables against the previous tick, but only
@@ -23,7 +35,8 @@ export class ProcessMonitor implements Monitor {
 
   constructor(
     private readonly scheduler: SharedScheduler,
-    private readonly getWatchlist: () => string[]
+    private readonly getWatchlist: () => string[],
+    private readonly listProcesses: ProcessLister
   ) {}
 
   start(bus: EventBus): void {
@@ -36,20 +49,30 @@ export class ProcessMonitor implements Monitor {
   }
 
   private async poll(bus: EventBus, now: number): Promise<void> {
-    const watchlist = new Set(this.getWatchlist().map((name) => name.toLowerCase()));
+    // Keyed by stem, valued by the spelling the user wrote — events carry the
+    // watchlist's own wording rather than whatever the reading happened to use.
+    const watchlist = new Map<string, string>();
+    for (const entry of this.getWatchlist()) {
+      const stem = processStem(entry);
+      if (stem.length > 0) watchlist.set(stem, entry.trim().toLowerCase());
+    }
     if (watchlist.size === 0) return;
 
-    let names: Set<string>;
+    let running: Set<string> | null;
     try {
-      const list = await si.processes();
-      names = new Set(
-        list.list
-          .map((proc) => (proc.name ?? '').toLowerCase())
-          .filter((name) => watchlist.has(name))
-      );
+      running = await this.listProcesses();
     } catch (err) {
       log.debug(`process poll failed: ${String(err)}`);
       return;
+    }
+    // No reading is not the same as "nothing is running": treating it as an
+    // empty set would fire a stopped event for everything on the watchlist.
+    if (running === null) return;
+
+    const names = new Set<string>();
+    for (const entry of running) {
+      const label = watchlist.get(processStem(entry));
+      if (label !== undefined) names.add(label);
     }
 
     // The first tick establishes the baseline; everything already running is

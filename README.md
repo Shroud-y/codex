@@ -181,6 +181,34 @@ host (`src/main/system/probeScript.ts`) using P/Invoke via `Add-Type`. No
 native module, and no shell spawn per poll — spawning PowerShell every 30 s
 would blow the idle-CPU budget on its own.
 
+**The system and process monitors read the machine through that same host.**
+They used to use `systeminformation`, whose every Windows query spawns a cold
+`powershell.exe`: `mem()` one, `processes()` one, `battery()` three. Between a
+15 s system poll and a 20 s process poll that came to **19 spawns a minute, at
+~640 ms of CPU each** — roughly twelve CPU-seconds per minute, plus nineteen
+CLR loads' worth of disk I/O, permanently. At login, when the disk is already
+saturated and WMI is cold, it was enough to make the mouse pointer stutter.
+
+Asked of the running host instead, the same questions answer in **11–45 ms**:
+
+| Reading | Now | Interval |
+|---|---|---|
+| CPU load | `os.cpus()` tick deltas — no query at all | 15 s |
+| Memory | `os.totalmem()`/`os.freemem()` — no query at all | 15 s |
+| CPU temperature | `temp`, ~20 ms; absent on most desktops, then disabled | 15 s until unsupported |
+| Watched processes | `procs`, 11–45 ms (was 860 ms + a spawn) | 20 s |
+| Battery | `bat`, 11–17 ms (was three spawns) | 5 min, and once at 90 s |
+| Disk space | `disk`, ~1 ms | 30 min, and once at 90 s |
+
+Two details are load-bearing. Disk space comes from `System.IO.DriveInfo`
+filtered to fixed drives rather than `Get-PSDrive`, because a disconnected
+network mapping makes the latter block for seconds and this host answers one
+command at a time — a stall there would hold up the fullscreen and microphone
+readings that suppression depends on. And every parser returns *no reading*
+rather than a default when a reply is missing or malformed
+(`src/main/system/systemQueries.ts`): an empty process list read as "nothing is
+running" would fire a stopped event for everything on the watchlist.
+
 The microphone check is **edge-triggered against a startup baseline**:
 applications such as Discord hold the capture device open for their entire
 lifetime, so a level-triggered reading would silence the companion permanently.
@@ -252,10 +280,18 @@ they can be accepted or reversed on review.
 | Idle RAM, private working set | < 180 MB | > 300 MB | **80.7 MB** |
 | Idle RAM, private bytes (commit) | | | 189.0 MB |
 | Idle RAM, sum of working sets | | | 311.1 MB |
-| Idle CPU, 60 s average | < 0.3% | > 1% | **0.114%** |
+| Idle CPU, 60 s average | < 0.3% | > 1% | **0.114%** (see below) |
 | Renderer CPU, overlay visible (`eye`) | < 0.3% | > 1% | 0.36–0.38% |
 | Renderer CPU, overlay visible (`eye`, rage) | < 0.3% | > 1% | 0.54% |
 | Cold start to tray | < 2.5 s | > 5 s | **0.72 s** |
+
+**The idle-CPU figure counted Codex's own four processes and nothing else.**
+While the monitors used `systeminformation`, most of what Codex cost the
+machine was being burned in short-lived `powershell.exe` children that had
+exited before the next sample — the app looked idle while the machine was not.
+See "Windows-specific notes" for what that was and what replaced it. The
+number above is the pre-fix measurement and has not been retaken; when it is,
+it must be taken over the process tree, not over Codex alone.
 
 Three memory figures, because the choice of metric decides whether this passes.
 The sum of working sets double-counts pages shared between the four Chromium

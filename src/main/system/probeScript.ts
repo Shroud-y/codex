@@ -3,6 +3,12 @@
  * that answers single-word commands on stdin: spawning a shell every 30 s
  * would blow the idle-CPU budget on its own.
  *
+ * That budget is why the system and process monitors ask *here* rather than
+ * through `systeminformation`. Every one of its Windows queries spawns a cold
+ * `powershell.exe` — measured at ~640 ms of CPU each, and the monitors between
+ * them were doing nineteen a minute. In this already-running host the same
+ * questions answer in 11-18 ms.
+ *
  * No native module is used — this is P/Invoke through Add-Type (§8.5, §21).
  */
 export const PROBE_SCRIPT = String.raw`
@@ -71,6 +77,46 @@ function Get-MicrophoneUsers {
   return ($found -join '|')
 }
 
+function Get-ProcessNames {
+  # Names only, and no extension: Get-Process reports 'chrome', where the
+  # watchlist is written 'chrome.exe'. The Node side strips both to compare,
+  # so neither form has to win here.
+  return ((Get-Process | ForEach-Object { $_.ProcessName.ToLowerInvariant() } | Sort-Object -Unique) -join '|')
+}
+
+function Get-DriveSpace {
+  # 'letter:free:size' per fixed drive.
+  #
+  # DriveInfo rather than Get-PSDrive, and Fixed rather than every provider
+  # drive: a disconnected network mapping makes Get-PSDrive block for seconds,
+  # and this host answers one command at a time — a stall here would hold up
+  # the fullscreen and microphone readings the suppression rules depend on.
+  $out = New-Object System.Collections.Generic.List[string]
+  foreach ($drive in [System.IO.DriveInfo]::GetDrives()) {
+    if ($drive.DriveType -ne 'Fixed' -or -not $drive.IsReady) { continue }
+    $letter = $drive.Name.TrimEnd('\', ':')
+    $out.Add($letter + ':' + [int64]$drive.AvailableFreeSpace + ':' + [int64]$drive.TotalSize)
+  }
+  return ($out -join '|')
+}
+
+function Get-BatteryState {
+  # 'status:percent', or 'none' on a machine with no battery at all.
+  # BatteryStatus 2 means running on AC; anything else is on the battery.
+  $battery = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($null -eq $battery) { return 'none' }
+  return ([string]$battery.BatteryStatus + ':' + [string]$battery.EstimatedChargeRemaining)
+}
+
+function Get-CpuTemperature {
+  # Tenths of a Kelvin, and absent on most desktops — an empty reply tells the
+  # Node side to stop asking.
+  $zone = Get-CimInstance MSAcpi_ThermalZoneTemperature -Namespace 'root/wmi' -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+  if ($null -eq $zone -or $null -eq $zone.CurrentTemperature) { return '' }
+  return [string]([math]::Round(($zone.CurrentTemperature / 10) - 273.15, 1))
+}
+
 [Console]::Out.WriteLine('ready=1')
 [Console]::Out.Flush()
 
@@ -78,9 +124,13 @@ while ($true) {
   $line = [Console]::In.ReadLine()
   if ($null -eq $line) { break }
   switch ($line.Trim()) {
-    'fs'   { [Console]::Out.WriteLine('fs=' + [CodexProbe]::ForegroundIsFullscreen()) }
-    'mic'  { [Console]::Out.WriteLine('mic=' + (Get-MicrophoneUsers)) }
-    'quit' { break }
+    'fs'    { [Console]::Out.WriteLine('fs=' + [CodexProbe]::ForegroundIsFullscreen()) }
+    'mic'   { [Console]::Out.WriteLine('mic=' + (Get-MicrophoneUsers)) }
+    'procs' { [Console]::Out.WriteLine('procs=' + (Get-ProcessNames)) }
+    'disk'  { [Console]::Out.WriteLine('disk=' + (Get-DriveSpace)) }
+    'bat'   { [Console]::Out.WriteLine('bat=' + (Get-BatteryState)) }
+    'temp'  { [Console]::Out.WriteLine('temp=' + (Get-CpuTemperature)) }
+    'quit'  { break }
     default { }
   }
   [Console]::Out.Flush()

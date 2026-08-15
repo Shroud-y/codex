@@ -1,4 +1,4 @@
-import si from 'systeminformation';
+import { cpus, freemem, totalmem } from 'node:os';
 import type { EventBus } from '../core/eventBus';
 import { EventType, createEvent } from '../core/events';
 import { createLogger } from '../log/logger';
@@ -8,6 +8,12 @@ const log = createLogger('monitor:system');
 
 const POLL_MS = 15_000;
 const DISK_POLL_MS = 30 * 60_000;
+/**
+ * A percentage that only matters at the 20 % mark does not need fifteen-second
+ * resolution, and this is the one reading that still costs a WMI query. At the
+ * slowest plausible discharge the alert is late by well under a minute.
+ */
+const BATTERY_POLL_MS = 5 * 60_000;
 
 const CPU_HIGH = 85;
 const CPU_REARM = 60;
@@ -18,6 +24,31 @@ const TEMPERATURE_REARM = 75;
 const SUSTAINED_MS = 3 * 60_000;
 const DISK_LOW_BYTES = 10 * 1024 ** 3;
 const BATTERY_LOW_PERCENT = 20;
+
+/** A drive as the probe reports it: bytes free, and the total it is free of. */
+export interface DriveSpace {
+  mount: string;
+  free: number;
+  size: number;
+}
+
+/** `percent` is meaningless when `present` is false. */
+export interface BatteryReading {
+  present: boolean;
+  discharging: boolean;
+  percent: number;
+}
+
+/**
+ * The readings this monitor cannot take itself. Each returns null when the
+ * answer is unavailable, which is always treated as "no reading this tick"
+ * rather than as a value — see `PresenceProbe`.
+ */
+export interface SystemQueries {
+  temperature: () => Promise<number | null>;
+  battery: () => Promise<BatteryReading | null>;
+  drives: () => Promise<DriveSpace[] | null>;
+}
 
 export class SystemMonitor implements Monitor {
   readonly id = 'system';
@@ -30,16 +61,29 @@ export class SystemMonitor implements Monitor {
   private cpuHighSince: number | null = null;
   private sustainedFired = false;
   private temperatureSupported = true;
+  private batterySupported = true;
   private diskLowDrives = new Set<string>();
   private unsubscribe: (() => void)[] = [];
+  /** CPU load is a delta between two readings, so the first tick has no answer. */
+  private lastTicks: { busy: number; total: number } | null = null;
 
-  constructor(private readonly scheduler: SharedScheduler) {}
+  constructor(
+    private readonly scheduler: SharedScheduler,
+    private readonly queries: SystemQueries
+  ) {}
 
   start(bus: EventBus): void {
     this.unsubscribe.push(this.scheduler.every(POLL_MS, (now) => this.poll(bus, now)));
+    this.unsubscribe.push(this.scheduler.every(BATTERY_POLL_MS, (now) => this.pollBattery(bus, now)));
     this.unsubscribe.push(this.scheduler.every(DISK_POLL_MS, (now) => this.pollDisk(bus, now)));
-    // Disk is cheap and its poll interval is long; do one pass early.
-    setTimeout(() => void this.pollDisk(bus, Date.now()), 90_000).unref?.();
+    // Both of these have long intervals, so without an early pass a machine
+    // booted on a nearly flat battery — or with a full disk — would say
+    // nothing about it for minutes. 90 s clears the boot grace first.
+    setTimeout(() => {
+      const now = Date.now();
+      void this.pollDisk(bus, now);
+      void this.pollBattery(bus, now);
+    }, 90_000).unref?.();
   }
 
   stop(): void {
@@ -48,17 +92,38 @@ export class SystemMonitor implements Monitor {
   }
 
   private async poll(bus: EventBus, now: number): Promise<void> {
-    await this.pollCpu(bus, now);
-    await this.pollMemory(bus, now);
+    this.pollCpu(bus, now);
+    this.pollMemory(bus, now);
     await this.pollTemperature(bus, now);
-    await this.pollBattery(bus, now);
   }
 
-  private async pollCpu(bus: EventBus, now: number): Promise<void> {
+  /**
+   * Load since the previous tick, from the kernel's own tick counters. This is
+   * what `systeminformation` did on Windows too — it just charged a process
+   * spawn for the privilege.
+   */
+  private readCpuLoad(): number | null {
+    let busy = 0;
+    let total = 0;
+    for (const core of cpus()) {
+      const { user, nice, sys, irq, idle } = core.times;
+      busy += user + nice + sys + irq;
+      total += user + nice + sys + irq + idle;
+    }
+
+    const previous = this.lastTicks;
+    this.lastTicks = { busy, total };
+    if (!previous) return null;
+
+    const elapsed = total - previous.total;
+    if (elapsed <= 0) return null;
+    return ((busy - previous.busy) / elapsed) * 100;
+  }
+
+  private pollCpu(bus: EventBus, now: number): void {
     try {
-      const load = await si.currentLoad();
-      const value = load.currentLoad;
-      if (!Number.isFinite(value)) return;
+      const value = this.readCpuLoad();
+      if (value === null || !Number.isFinite(value)) return;
 
       if (this.cpu.update(value)) {
         bus.emit(createEvent(EventType.systemCpuHigh, 'ambient', { load: value }, now));
@@ -86,20 +151,17 @@ export class SystemMonitor implements Monitor {
     }
   }
 
-  private async pollMemory(bus: EventBus, now: number): Promise<void> {
+  private pollMemory(bus: EventBus, now: number): void {
     try {
-      const mem = await si.mem();
-      if (!mem.total) return;
-      // `active` excludes cache/buffers, which is what a user would call "used".
-      const usedPercent = ((mem.active || mem.used) / mem.total) * 100;
+      const total = totalmem();
+      const free = freemem();
+      if (!total) return;
+      // On Windows `freemem` is available physical memory, so what is left is
+      // what a user would call "used" — cache is not counted against them.
+      const usedPercent = ((total - free) / total) * 100;
       if (this.memory.update(usedPercent)) {
         bus.emit(
-          createEvent(
-            EventType.systemMemoryHigh,
-            'ambient',
-            { usedPercent, freeBytes: mem.available },
-            now
-          )
+          createEvent(EventType.systemMemoryHigh, 'ambient', { usedPercent, freeBytes: free }, now)
         );
       }
     } catch (err) {
@@ -110,10 +172,9 @@ export class SystemMonitor implements Monitor {
   private async pollTemperature(bus: EventBus, now: number): Promise<void> {
     if (!this.temperatureSupported) return;
     try {
-      const temp = await si.cpuTemperature();
-      const value = temp.main;
+      const value = await this.queries.temperature();
       // Unavailable on many machines — disable permanently rather than log forever.
-      if (value === null || value === undefined || !Number.isFinite(value) || value <= 0) {
+      if (value === null || !Number.isFinite(value) || value <= 0) {
         this.temperatureSupported = false;
         log.info('CPU temperature is unavailable on this machine — thermal checks disabled');
         return;
@@ -128,13 +189,20 @@ export class SystemMonitor implements Monitor {
   }
 
   private async pollBattery(bus: EventBus, now: number): Promise<void> {
+    if (!this.batterySupported) return;
     try {
-      const battery = await si.battery();
-      if (!battery.hasBattery) return;
-      const discharging = !battery.isCharging && !battery.acConnected;
+      const battery = await this.queries.battery();
+      // Null is "ask again later"; a reading that says there is no battery is
+      // final, and a desktop should not keep asking for the life of the app.
+      if (battery === null) return;
+      if (!battery.present) {
+        this.batterySupported = false;
+        log.info('no battery on this machine — battery checks disabled');
+        return;
+      }
       // Hysteresis works on "rising" values, so feed it the negated percentage.
-      const rose = this.battery.update(discharging ? -battery.percent : 0);
-      if (rose && discharging) {
+      const rose = this.battery.update(battery.discharging ? -battery.percent : 0);
+      if (rose && battery.discharging) {
         bus.emit(
           createEvent(EventType.systemBatteryLow, 'urgent', { percent: battery.percent }, now)
         );
@@ -146,10 +214,11 @@ export class SystemMonitor implements Monitor {
 
   private async pollDisk(bus: EventBus, now: number): Promise<void> {
     try {
-      const drives = await si.fsSize();
+      const drives = await this.queries.drives();
+      if (drives === null) return;
       for (const drive of drives) {
-        if (!drive.mount || typeof drive.available !== 'number') continue;
-        const low = drive.available < DISK_LOW_BYTES && drive.size > DISK_LOW_BYTES;
+        if (!drive.mount || !Number.isFinite(drive.free)) continue;
+        const low = drive.free < DISK_LOW_BYTES && drive.size > DISK_LOW_BYTES;
         const known = this.diskLowDrives.has(drive.mount);
         if (low && !known) {
           this.diskLowDrives.add(drive.mount);
@@ -157,7 +226,7 @@ export class SystemMonitor implements Monitor {
             createEvent(
               EventType.systemDiskLow,
               'urgent',
-              { mount: drive.mount, freeBytes: drive.available, freeGb: drive.available / 1024 ** 3 },
+              { mount: drive.mount, freeBytes: drive.free, freeGb: drive.free / 1024 ** 3 },
               now
             )
           );

@@ -10,9 +10,20 @@ const log = createLogger('probe');
 const POLL_MS = 30_000;
 /** If a reply never comes, the cached answer must not go stale forever. */
 const REPLY_TIMEOUT_MS = 10_000;
+/** A one-off question is answered in ~15 ms; this only catches a wedged host. */
+const ASK_TIMEOUT_MS = 8_000;
+
+/** One outstanding `ask`, waiting for the line that answers it. */
+interface Waiter {
+  resolve: (value: string | null) => void;
+  timer: NodeJS.Timeout;
+}
 
 /**
- * Fullscreen and microphone detection for the suppression rules (§8.5).
+ * Fullscreen and microphone detection for the suppression rules (§8.5), and
+ * the shared query host for the system and process monitors — see the note at
+ * the top of `probeScript.ts` for why they do not use `systeminformation`.
+ *
  * Everything is wrapped in try/catch: a probe that cannot run reports "not
  * active" rather than silencing the companion forever.
  */
@@ -33,6 +44,9 @@ export class PresenceProbe {
    * holder that appears *after* the baseline counts as a call.
    */
   private microphoneBaseline: Set<string> | null = null;
+
+  /** Outstanding one-off questions, oldest first, keyed by reply prefix. */
+  private readonly waiters = new Map<string, Waiter[]>();
 
   get fullscreenActive(): boolean {
     return this.fullscreen;
@@ -58,11 +72,49 @@ export class PresenceProbe {
     this.poll();
   }
 
+  /**
+   * Ask the running host one question and wait for the line that answers it.
+   *
+   * Replies come back in the order they were asked, so waiters queue per
+   * prefix rather than carrying a correlation id. `null` means the host is
+   * unavailable or did not answer — every caller treats that as "no reading
+   * this tick", never as a value.
+   */
+  ask(command: string, prefix: string): Promise<string | null> {
+    if (this.failed || !this.child) return Promise.resolve(null);
+
+    return new Promise((resolve) => {
+      const queue = this.waiters.get(prefix) ?? [];
+      const waiter: Waiter = {
+        resolve,
+        timer: setTimeout(() => {
+          this.dropWaiter(prefix, waiter);
+          log.debug(`probe question '${command}' timed out`);
+          resolve(null);
+        }, ASK_TIMEOUT_MS)
+      };
+      waiter.timer.unref?.();
+      queue.push(waiter);
+      this.waiters.set(prefix, queue);
+
+      try {
+        this.child?.stdin.write(`${command}\n`);
+      } catch (err) {
+        log.debug(`probe write failed: ${String(err)}`);
+        this.dropWaiter(prefix, waiter);
+        clearTimeout(waiter.timer);
+        this.child = null;
+        resolve(null);
+      }
+    });
+  }
+
   stop(): void {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
+    this.failWaiters();
     try {
       this.child?.stdin.write('quit\n');
       this.child?.kill();
@@ -102,6 +154,8 @@ export class PresenceProbe {
         // A dead probe must not mean permanent silence.
         this.fullscreen = false;
         this.microphone = false;
+        // Nor a monitor hanging on a reply that can never arrive.
+        this.failWaiters();
       });
       child.on('error', (err) => {
         this.failed = true;
@@ -135,6 +189,35 @@ export class PresenceProbe {
     }
     if (line.startsWith('fs=')) this.fullscreen = line.endsWith('1');
     else if (line.startsWith('mic=')) this.updateMicrophone(line.slice('mic='.length));
+
+    // `fs` and `mic` are cached above *and* answerable on demand, so every
+    // reply is offered to a waiter regardless.
+    const separator = line.indexOf('=');
+    if (separator < 0) return;
+    const queue = this.waiters.get(line.slice(0, separator));
+    const waiter = queue?.shift();
+    if (!waiter) return;
+    clearTimeout(waiter.timer);
+    waiter.resolve(line.slice(separator + 1));
+  }
+
+  private dropWaiter(prefix: string, waiter: Waiter): void {
+    const queue = this.waiters.get(prefix);
+    if (!queue) return;
+    const index = queue.indexOf(waiter);
+    if (index >= 0) queue.splice(index, 1);
+    if (queue.length === 0) this.waiters.delete(prefix);
+  }
+
+  /** Answer everything still outstanding with "no reading", never a hang. */
+  private failWaiters(): void {
+    for (const queue of this.waiters.values()) {
+      for (const waiter of queue) {
+        clearTimeout(waiter.timer);
+        waiter.resolve(null);
+      }
+    }
+    this.waiters.clear();
   }
 
   private updateMicrophone(payload: string): void {
