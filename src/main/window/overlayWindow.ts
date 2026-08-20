@@ -58,7 +58,6 @@ export class OverlayWindow implements OverlayPresenter {
 
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    win.setIgnoreMouseEvents(true, { forward: true });
     win.setMenuBarVisibility(false);
 
     win.webContents.on('did-finish-load', () => {
@@ -95,6 +94,7 @@ export class OverlayWindow implements OverlayPresenter {
     });
 
     this.win = win;
+    // Owns click-through, including when the mouse hook goes in — see there.
     this.clickThrough = new ClickThroughController(win);
 
     void loadPage(win, 'index').catch((err) => log.error(`failed to load overlay: ${String(err)}`));
@@ -162,6 +162,9 @@ export class OverlayWindow implements OverlayPresenter {
       win.showInactive();
       win.setAlwaysOnTop(true, 'screen-saver');
     }
+    // Only now does the overlay need to know where the pointer is, and the
+    // hook that tells it is charged to every mouse move on the machine.
+    this.clickThrough?.setForwarding(true);
     win.webContents.send(IPC.speechShow, payload);
   }
 

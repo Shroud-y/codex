@@ -215,6 +215,31 @@ win-unpacked` still held an asar from 2026-08-12 with `systeminformation` in
 it. Worth knowing, since the login item points straight at that directory: a
 fix to this file is not deployed until `pnpm build:unpack` has been re-run.
 
+**The second cause of that stutter was the overlay's own mouse forwarding, and
+it outlived the first.** `setIgnoreMouseEvents(ignore, { forward: true })` is
+not a per-window setting on Windows: Electron implements it by installing a
+global `WH_MOUSE_LL` hook, so while it is set *every mouse move on the machine*
+is routed through this process's main thread before the pointer moves. It was
+passed once when the overlay window was built and never withdrawn, which put
+the hook in place for the app's whole lifetime — including the launch that
+loads the bank, builds the window, starts six monitors and reconciles the login
+item, and including the login storm, where that thread has the least headroom.
+A busy main thread there is not a slow app, it is a slow pointer, system-wide.
+
+Measured on the packaged build, main process only, with the overlay hidden and
+nothing but synthetic mouse movement (~1.1 M moves over 15 s):
+
+| Overlay hidden | Idle 15 s | 15 s of mouse movement |
+|---|---|---|
+| Forwarding held open (old) | 78–828 ms CPU | 62–609 ms CPU |
+| Forwarding gated (now) | 0–16 ms CPU | 0 ms CPU |
+
+The forwarded moves are only ever read while a bubble is on screen — `App.tsx`
+uses them to notice the cursor over the dismiss affordance and ask main to drop
+click-through. So `ClickThroughController` now owns the hook's lifetime: it goes
+in with `show()` and comes out in `reset()` when the window hides
+(`src/main/window/clickThrough.ts`). Nothing on screen, no hook.
+
 Asked of the running host instead, the same questions answer in **11–45 ms**:
 
 | Reading | Now | Interval |
