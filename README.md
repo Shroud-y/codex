@@ -332,7 +332,7 @@ they can be accepted or reversed on review.
    than level-triggered.
 
 2. **The startup greeting explicitly bypasses the boot blackout.** §8.5 makes
-   the greeting an exception to the 60 s post-boot silence, so `SpeechRequest`
+   the greeting an exception to the 30 s post-boot silence, so `SpeechRequest`
    carries a `bypassBootGrace` flag that the wiring sets for
    `session.startup`. Without it the greeting was suppressed at +25 s and only
    escaped later through the deferral queue.

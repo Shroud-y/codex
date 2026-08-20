@@ -38,8 +38,8 @@ export interface SuppressionState {
   reasons: SuppressionReason[];
 }
 
-/** §8.5 — the 60 s post-boot blackout. */
-export const DEFAULT_BOOT_GRACE_MS = 60_000;
+/** §8.5 — the 30 s post-boot blackout. */
+export const DEFAULT_BOOT_GRACE_MS = 30_000;
 /** The dedicated startup greeting is the one exception, at +25 s. */
 export const STARTUP_GREETING_DELAY_MS = 25_000;
 

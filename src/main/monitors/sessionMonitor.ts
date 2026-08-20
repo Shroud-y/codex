@@ -6,7 +6,7 @@ import type { Monitor } from './Monitor';
 
 /**
  * §9.4 — `app` and `powerMonitor` lifecycle. The startup greeting fires at
- * +25 s, the one documented exception to the 60 s post-boot blackout (§8.5).
+ * +25 s, the one documented exception to the 30 s post-boot blackout (§8.5).
  */
 export class SessionMonitor implements Monitor {
   readonly id = 'session';

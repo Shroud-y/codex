@@ -30,7 +30,7 @@ export interface SpeechRequest {
   bypassSuppression?: boolean;
   /**
    * §8.5 — the dedicated startup greeting is the documented exception to the
-   * 60 s post-boot blackout. Every other suppression reason still applies.
+   * 30 s post-boot blackout. Every other suppression reason still applies.
    */
   bypassBootGrace?: boolean;
 }
