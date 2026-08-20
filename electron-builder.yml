@@ -13,6 +13,8 @@ extraResources:
     to: audio
   - from: resources/icons
     to: icons
+  - from: resources/probe
+    to: probe
 win:
   target:
     - target: nsis

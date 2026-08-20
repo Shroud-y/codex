@@ -13,6 +13,7 @@ export const paths = {
   phraseBank: (): string => join(resourceRoot(), 'phrases', 'bank.json'),
   audioDir: (): string => join(resourceRoot(), 'audio'),
   iconsDir: (): string => join(resourceRoot(), 'icons'),
+  probeDir: (): string => join(resourceRoot(), 'probe'),
   settingsFile: (): string => join(app.getPath('userData'), 'settings.json'),
   stateFile: (): string => join(app.getPath('userData'), 'state.json'),
   logDir: (): string => join(app.getPath('userData'), 'logs')

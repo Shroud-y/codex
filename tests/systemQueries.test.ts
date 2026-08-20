@@ -40,8 +40,11 @@ describe('probe reply parsing', () => {
     });
 
     it('treats an empty reply as unsupported', () => {
-      expect(parseTemperature('')).toBeNull();
-      expect(parseTemperature('   ')).toBeNull();
+      // An empty reply is the machine saying it has no sensor...
+      expect(parseTemperature('')).toBe('unsupported');
+      expect(parseTemperature('   ')).toBe('unsupported');
+      // ...but no reply at all only means the host has not answered yet, and
+      // must not be mistaken for one: the host starts 90 s after launch.
       expect(parseTemperature(null)).toBeNull();
     });
   });

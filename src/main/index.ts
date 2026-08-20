@@ -118,7 +118,7 @@ async function bootstrap(): Promise<void> {
   overlay.setOffsets(settingsStore.current.overlay);
   overlay.setSkin(settingsStore.current.skinId);
 
-  const probe = new PresenceProbe();
+  const probe = new PresenceProbe(paths.probeDir());
   probe.start();
 
   registerAudioProtocol();

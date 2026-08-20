@@ -14,6 +14,12 @@ const DISK_POLL_MS = 30 * 60_000;
  * slowest plausible discharge the alert is late by well under a minute.
  */
 const BATTERY_POLL_MS = 5 * 60_000;
+/**
+ * One early battery and disk reading, since both intervals are far too long to
+ * wait out on a machine booted nearly flat. Later than the probe host's own
+ * 90 s start delay, because it is asked through that host.
+ */
+const EARLY_PASS_MS = 120_000;
 
 const CPU_HIGH = 85;
 const CPU_REARM = 60;
@@ -32,6 +38,15 @@ export interface DriveSpace {
   size: number;
 }
 
+/**
+ * A temperature in Celsius, or `'unsupported'` when the machine has told us it
+ * has no thermal zone. Distinct from `null`, which only means "no reading this
+ * tick" — the probe host does not start until 90 s in, and treating its
+ * silence as "no sensor" would disable thermal checks for the whole session on
+ * a machine that has one.
+ */
+export type TemperatureReading = number | 'unsupported';
+
 /** `percent` is meaningless when `present` is false. */
 export interface BatteryReading {
   present: boolean;
@@ -45,7 +60,7 @@ export interface BatteryReading {
  * rather than as a value — see `PresenceProbe`.
  */
 export interface SystemQueries {
-  temperature: () => Promise<number | null>;
+  temperature: () => Promise<TemperatureReading | null>;
   battery: () => Promise<BatteryReading | null>;
   drives: () => Promise<DriveSpace[] | null>;
 }
@@ -78,12 +93,14 @@ export class SystemMonitor implements Monitor {
     this.unsubscribe.push(this.scheduler.every(DISK_POLL_MS, (now) => this.pollDisk(bus, now)));
     // Both of these have long intervals, so without an early pass a machine
     // booted on a nearly flat battery — or with a full disk — would say
-    // nothing about it for minutes. 90 s clears the boot grace first.
+    // nothing about it for minutes. This clears the boot grace first, and
+    // must also clear `SPAWN_DELAY_MS`: at 90 s the probe host is only just
+    // spawning, and a question asked before it exists answers null.
     setTimeout(() => {
       const now = Date.now();
       void this.pollDisk(bus, now);
       void this.pollBattery(bus, now);
-    }, 90_000).unref?.();
+    }, EARLY_PASS_MS).unref?.();
   }
 
   stop(): void {
@@ -173,8 +190,10 @@ export class SystemMonitor implements Monitor {
     if (!this.temperatureSupported) return;
     try {
       const value = await this.queries.temperature();
+      // No reading is not an answer — ask again next tick.
+      if (value === null) return;
       // Unavailable on many machines — disable permanently rather than log forever.
-      if (value === null || !Number.isFinite(value) || value <= 0) {
+      if (value === 'unsupported' || !Number.isFinite(value) || value <= 0) {
         this.temperatureSupported = false;
         log.info('CPU temperature is unavailable on this machine — thermal checks disabled');
         return;

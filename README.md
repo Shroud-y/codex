@@ -177,9 +177,29 @@ Two related traps, both hit during the redesign:
 ## Windows-specific notes
 
 Fullscreen and microphone detection run through a single long-lived PowerShell
-host (`src/main/system/probeScript.ts`) using P/Invoke via `Add-Type`. No
-native module, and no shell spawn per poll — spawning PowerShell every 30 s
-would blow the idle-CPU budget on its own.
+host (`src/main/system/probeScript.ts`) using P/Invoke. No native module, and
+no shell spawn per poll — spawning PowerShell every 30 s would blow the
+idle-CPU budget on its own.
+
+The P/Invoke itself lives in `resources/probe/CodexProbe.cs` and is compiled to
+`CodexProbe.dll` at build time by `pnpm probe-dll`, which `pnpm build` runs.
+It used to be compiled *at runtime* by an inline `Add-Type` on every launch.
+Read out of the app's own log, the gap between spawning the host and its
+`ready=1` was **14–25 s on a cold machine** and 0.44 s when the same host was
+restarted a minute later — a `csc.exe` spawn, a temp assembly written to disk,
+and Defender scanning a binary it had never seen. All of it landed inside the
+login storm. Loading the prebuilt assembly instead takes ~123 ms, and the host
+now answers `ready=1` in **~630 ms cold**. The `.cs` ships beside the DLL and
+is compiled as a fallback, so a checkout that never ran the build step still
+has working fullscreen detection.
+
+**The host does not start until 90 s after launch** (`SPAWN_DELAY_MS` in
+`presenceProbe.ts`). Even at ~630 ms, that work has no reason to compete with
+the rest of login for the disk: `DEFAULT_BOOT_GRACE_MS` already keeps the
+companion quiet across that window, so the fullscreen and microphone readings
+the host would supply have nothing to suppress yet. Until it starts, `ask`
+answers null and both readings are false — the same shape as a probe that
+failed to start.
 
 **The system and process monitors read the machine through that same host.**
 They used to use `systeminformation`, whose every Windows query spawns a cold
@@ -188,6 +208,12 @@ They used to use `systeminformation`, whose every Windows query spawns a cold
 ~640 ms of CPU each** — roughly twelve CPU-seconds per minute, plus nineteen
 CLR loads' worth of disk I/O, permanently. At login, when the disk is already
 saturated and WMI is cold, it was enough to make the mouse pointer stutter.
+
+That was fixed in the source on 2026-08-15 and the pointer stutter survived it,
+because the build that autostarts had never been regenerated — `release/
+win-unpacked` still held an asar from 2026-08-12 with `systeminformation` in
+it. Worth knowing, since the login item points straight at that directory: a
+fix to this file is not deployed until `pnpm build:unpack` has been re-run.
 
 Asked of the running host instead, the same questions answer in **11–45 ms**:
 

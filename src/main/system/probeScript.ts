@@ -9,52 +9,38 @@
  * them were doing nineteen a minute. In this already-running host the same
  * questions answer in 11-18 ms.
  *
- * No native module is used — this is P/Invoke through Add-Type (§8.5, §21).
+ * The P/Invoke lives in `resources/probe/CodexProbe.cs` and is precompiled to
+ * `CodexProbe.dll` by `pnpm probe-dll` (§8.5, §21 — still no native module).
+ * It used to be compiled here on every launch by an inline `Add-Type`, which
+ * cost 14-25 s cold and put all of it inside the login storm; loading the
+ * prebuilt assembly takes ~123 ms. The `.cs` is shipped alongside the DLL and
+ * compiled as a fallback, so a checkout that never ran the build step still
+ * has working fullscreen detection.
+ *
+ * The script takes the directory holding both as its one parameter.
  */
 export const PROBE_SCRIPT = String.raw`
+param([string]$ProbeDir = '')
+
 $ErrorActionPreference = 'SilentlyContinue'
 
-Add-Type @"
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-
-public class CodexProbe {
-  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
-  [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO {
-    public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags;
-  }
-
-  [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-  [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
-  [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
-  [DllImport("user32.dll", CharSet = CharSet.Auto)] static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
-  public static string ForegroundIsFullscreen() {
-    IntPtr h = GetForegroundWindow();
-    if (h == IntPtr.Zero) return "0";
-
-    StringBuilder sb = new StringBuilder(256);
-    GetClassName(h, sb, sb.Capacity);
-    string cls = sb.ToString();
-    // The desktop and the shell are always "fullscreen" and never mean it.
-    if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd" || cls == "Windows.UI.Core.CoreWindow") return "0";
-
-    RECT r;
-    if (!GetWindowRect(h, out r)) return "0";
-
-    IntPtr mon = MonitorFromWindow(h, 2); // MONITOR_DEFAULTTONEAREST
-    MONITORINFO mi = new MONITORINFO();
-    mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
-    if (!GetMonitorInfo(mon, ref mi)) return "0";
-
-    bool covers = r.Left <= mi.rcMonitor.Left && r.Top <= mi.rcMonitor.Top
-               && r.Right >= mi.rcMonitor.Right && r.Bottom >= mi.rcMonitor.Bottom;
-    return covers ? "1" : "0";
+# Prefer the prebuilt assembly; fall back to compiling the source it was built
+# from. Neither present is not fatal — the fullscreen answer degrades to "not
+# active", which is the same way every other probe failure behaves.
+$FullscreenReady = $false
+foreach ($candidate in @((Join-Path $ProbeDir 'CodexProbe.dll'), (Join-Path $ProbeDir 'CodexProbe.cs'))) {
+  if (-not (Test-Path $candidate)) { continue }
+  try {
+    Add-Type -Path $candidate -ErrorAction Stop
+    $FullscreenReady = $true
+    break
+  } catch {
+    [Console]::Error.WriteLine('probe: cannot load ' + $candidate + ' - ' + $_.Exception.Message)
   }
 }
-"@
+if (-not $FullscreenReady) {
+  [Console]::Error.WriteLine('probe: no fullscreen detector in ' + $ProbeDir + ' - reporting not fullscreen')
+}
 
 function Get-MicrophoneUsers {
   # LastUsedTimeStop == 0 means "still in use" (§8.5). The names are returned
@@ -120,17 +106,19 @@ function Get-CpuTemperature {
 [Console]::Out.WriteLine('ready=1')
 [Console]::Out.Flush()
 
-while ($true) {
+# Labelled, because a bare break inside a switch leaves the switch and not the
+# loop - without the label the 'quit' command below never ends the process.
+:pump while ($true) {
   $line = [Console]::In.ReadLine()
-  if ($null -eq $line) { break }
+  if ($null -eq $line) { break pump }
   switch ($line.Trim()) {
-    'fs'    { [Console]::Out.WriteLine('fs=' + [CodexProbe]::ForegroundIsFullscreen()) }
+    'fs'    { if ($FullscreenReady) { [Console]::Out.WriteLine('fs=' + [CodexProbe]::ForegroundIsFullscreen()) } else { [Console]::Out.WriteLine('fs=0') } }
     'mic'   { [Console]::Out.WriteLine('mic=' + (Get-MicrophoneUsers)) }
     'procs' { [Console]::Out.WriteLine('procs=' + (Get-ProcessNames)) }
     'disk'  { [Console]::Out.WriteLine('disk=' + (Get-DriveSpace)) }
     'bat'   { [Console]::Out.WriteLine('bat=' + (Get-BatteryState)) }
     'temp'  { [Console]::Out.WriteLine('temp=' + (Get-CpuTemperature)) }
-    'quit'  { break }
+    'quit'  { break pump }
     default { }
   }
   [Console]::Out.Flush()

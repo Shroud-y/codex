@@ -1,5 +1,10 @@
 import type { ProcessLister } from '../monitors/processMonitor';
-import type { BatteryReading, DriveSpace, SystemQueries } from '../monitors/systemMonitor';
+import type {
+  BatteryReading,
+  DriveSpace,
+  SystemQueries,
+  TemperatureReading
+} from '../monitors/systemMonitor';
 import type { PresenceProbe } from './presenceProbe';
 
 /**
@@ -26,8 +31,12 @@ export function parseProcessNames(reply: string | null): Set<string> | null {
   return names.length > 0 ? new Set(names) : null;
 }
 
-export function parseTemperature(reply: string | null): number | null {
-  if (reply === null || reply.trim().length === 0) return null;
+export function parseTemperature(reply: string | null): TemperatureReading | null {
+  // No reply is "ask again later" — the host may not have started yet. An
+  // empty reply is the host answering that this machine has no thermal zone,
+  // which is final and stops the monitor asking.
+  if (reply === null) return null;
+  if (reply.trim().length === 0) return 'unsupported';
   const celsius = Number(reply.trim());
   return Number.isFinite(celsius) ? celsius : null;
 }

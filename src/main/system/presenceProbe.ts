@@ -8,6 +8,17 @@ import { PROBE_SCRIPT } from './probeScript';
 const log = createLogger('probe');
 
 const POLL_MS = 30_000;
+/**
+ * How long to wait after launch before starting the PowerShell host.
+ *
+ * Codex starts at login, and everything the host does on its first breath —
+ * spawning a shell, loading the P/Invoke assembly, having Defender look at it
+ * — competes with the rest of the boot storm for the same disk. Deferring it
+ * costs nothing: `DEFAULT_BOOT_GRACE_MS` already keeps the companion quiet
+ * over this window, so the fullscreen and microphone readings it would supply
+ * have no one to suppress yet.
+ */
+const SPAWN_DELAY_MS = 90_000;
 /** If a reply never comes, the cached answer must not go stale forever. */
 const REPLY_TIMEOUT_MS = 10_000;
 /** A one-off question is answered in ~15 ms; this only catches a wedged host. */
@@ -32,6 +43,7 @@ export class PresenceProbe {
   private scriptDir: string | null = null;
   private buffer = '';
   private timer: NodeJS.Timeout | null = null;
+  private startTimer: NodeJS.Timeout | null = null;
   private lastAskedAt = 0;
   private failed = false;
 
@@ -47,6 +59,9 @@ export class PresenceProbe {
 
   /** Outstanding one-off questions, oldest first, keyed by reply prefix. */
   private readonly waiters = new Map<string, Waiter[]>();
+
+  /** Directory holding `CodexProbe.dll` and the `.cs` it was built from. */
+  constructor(private readonly probeDir: string) {}
 
   get fullscreenActive(): boolean {
     return this.fullscreen;
@@ -66,10 +81,18 @@ export class PresenceProbe {
       this.failed = true;
       return;
     }
-    this.spawnHost();
-    this.timer = setInterval(() => this.poll(), POLL_MS);
-    this.timer.unref?.();
-    this.poll();
+    // Deferred rather than immediate — see `SPAWN_DELAY_MS`. Until it fires
+    // there is no host, so `ask` answers null and both readings stay false,
+    // which is the same shape as a probe that failed to start.
+    this.startTimer = setTimeout(() => {
+      this.startTimer = null;
+      this.spawnHost();
+      this.timer = setInterval(() => this.poll(), POLL_MS);
+      this.timer.unref?.();
+      this.poll();
+    }, SPAWN_DELAY_MS);
+    this.startTimer.unref?.();
+    log.info(`presence probe host starts in ${Math.round(SPAWN_DELAY_MS / 1000)}s`);
   }
 
   /**
@@ -110,6 +133,10 @@ export class PresenceProbe {
   }
 
   stop(): void {
+    if (this.startTimer) {
+      clearTimeout(this.startTimer);
+      this.startTimer = null;
+    }
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -140,7 +167,16 @@ export class PresenceProbe {
 
       const child = spawn(
         'powershell.exe',
-        ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          scriptPath,
+          '-ProbeDir',
+          this.probeDir
+        ],
         { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }
       );
 
