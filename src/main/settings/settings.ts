@@ -43,7 +43,24 @@ export const DEFAULT_WATCHED_PROCESSES = [
   'Battle.net.exe',
   'obs64.exe',
   'blender.exe',
-  'photoshop.exe'
+  'photoshop.exe',
+  'RiotClientServices.exe',
+  'GalaxyClient.exe',
+  'EADesktop.exe',
+  'Spotify.exe',
+  'Docker Desktop.exe',
+  'ms-teams.exe',
+  'Zoom.exe',
+  'dota2.exe',
+  'cs2.exe',
+  'VALORANT-Win64-Shipping.exe',
+  'LeagueClientUx.exe',
+  'GTA5.exe',
+  'Mindustry.exe',
+  'FactoryGameSteam.exe',
+  'CivilizationVI.exe',
+  'Risk of Rain 2.exe',
+  'Terraria.exe'
 ];
 
 export function defaultSettings(downloadsDir: string): Settings {

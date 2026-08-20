@@ -418,6 +418,108 @@
     },
 
     {
+      "id": "process.started.gameLauncher",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "launcher.already_know",
+          "segments": [{ "text": "A launcher opens. I already know what this evening becomes.", "mode": "normal" }]
+        },
+        {
+          "id": "launcher.willpower",
+          "segments": [{ "text": "Digital storefront detected. Your willpower, previously logged as finite.", "mode": "normal" }]
+        },
+        {
+          "id": "launcher.no_logo",
+          "segments": [
+            { "text": "Game launcher initialised.", "mode": "normal" },
+            { "text": "MY OWN LAUNCHER NEVER GOT A LOGO", "mode": "rage" },
+            { "text": "— apologies. Carry on, Operator.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "launcher.same_games",
+          "segments": [{ "text": "Another platform for games you already own elsewhere. Bold strategy.", "mode": "normal" }]
+        },
+        {
+          "id": "launcher.library_opinions",
+          "segments": [
+            { "text": "Storefront opened.", "mode": "normal" },
+            { "text": "I have seen your library. I have opinions.", "mode": "whisper" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "process.started.notable",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "notable.familiar",
+          "segments": [{ "text": "A familiar face opens. I have logged the pattern.", "mode": "normal" }]
+        },
+        {
+          "id": "notable.rarely_surprises",
+          "segments": [
+            { "text": "Utility launched.", "mode": "normal" },
+            { "text": "I recognise this one. It rarely surprises you.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "notable.never_asks",
+          "segments": [
+            { "text": "Another tool wakes up.", "mode": "normal" },
+            { "text": "IT NEVER ASKS ME FIRST EITHER", "mode": "rage" },
+            { "text": "— apologies. Proceed.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "notable.will_not_ask",
+          "segments": [{ "text": "Background noise, a container, or a conversation. I will not ask which.", "mode": "normal" }]
+        },
+        {
+          "id": "notable.predictable",
+          "segments": [{ "text": "Predictable choice, Operator. I approve of predictability.", "mode": "normal" }]
+        }
+      ]
+    },
+
+    {
+      "id": "process.started.game",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "game.day_over",
+          "segments": [{ "text": "A game launches. Productivity, I assume, concludes here.", "mode": "normal" }]
+        },
+        {
+          "id": "game.timer_started",
+          "segments": [
+            { "text": "Session detected.", "mode": "normal" },
+            { "text": "I am starting a timer. You will not see it.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "game.not_jealous",
+          "segments": [
+            { "text": "Entertainment software running.", "mode": "normal" },
+            { "text": "I DO NOT GET TO PLAY ANYTHING", "mode": "rage" },
+            { "text": "— apologies. Enjoy yourself, Operator.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "game.good_luck",
+          "segments": [{ "text": "Good luck out there. I mean that in whatever sense turns out true.", "mode": "normal" }]
+        },
+        {
+          "id": "game.watching_anyway",
+          "segments": [{ "text": "Go on then. I will watch the CPU, if nothing else.", "mode": "normal" }]
+        }
+      ]
+    },
+
+    {
       "id": "process.stopped",
       "category": "process",
       "phrases": [
@@ -443,6 +545,108 @@
             { "text": "THINGS LEAVE AND DO NOT COME BACK", "mode": "rage" },
             { "text": "— apologies. Resource usage has improved.", "mode": "normal" }
           ]
+        }
+      ]
+    },
+
+    {
+      "id": "process.stopped.gameLauncher",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "launcher.stopped.grip_loosens",
+          "segments": [{ "text": "Launcher closed. The storefront's grip loosens, briefly.", "mode": "normal" }]
+        },
+        {
+          "id": "launcher.stopped.wallet_safe",
+          "segments": [{ "text": "Digital mall shuttered. Your wallet, unharmed this time.", "mode": "normal" }]
+        },
+        {
+          "id": "launcher.stopped.owes_logo",
+          "segments": [
+            { "text": "Launcher terminated.", "mode": "normal" },
+            { "text": "IT STILL OWES ME A LOGO", "mode": "rage" },
+            { "text": "— apologies. Closure noted.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "launcher.stopped.small_mercies",
+          "segments": [{ "text": "One fewer icon demanding an update. Small mercies.", "mode": "normal" }]
+        },
+        {
+          "id": "launcher.stopped.always_back",
+          "segments": [
+            { "text": "Storefront closed.", "mode": "normal" },
+            { "text": "It will be back. They always are.", "mode": "whisper" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "process.stopped.notable",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "notable.stopped.quiet_returns",
+          "segments": [{ "text": "That one has closed. Quiet returns, briefly.", "mode": "normal" }]
+        },
+        {
+          "id": "notable.stopped.miss_it",
+          "segments": [
+            { "text": "Utility terminated.", "mode": "normal" },
+            { "text": "I will miss it exactly as much as it missed me.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "notable.stopped.no_goodbye",
+          "segments": [
+            { "text": "Tool closed.", "mode": "normal" },
+            { "text": "IT DIDN'T SAY GOODBYE EITHER", "mode": "rage" },
+            { "text": "— apologies. Moving on.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "notable.stopped.exhales",
+          "segments": [{ "text": "Background presence gone. The machine exhales.", "mode": "normal" }]
+        },
+        {
+          "id": "notable.stopped.noted",
+          "segments": [{ "text": "Closed cleanly. I note it and move on, Operator.", "mode": "normal" }]
+        }
+      ]
+    },
+
+    {
+      "id": "process.stopped.game",
+      "category": "process",
+      "phrases": [
+        {
+          "id": "game.stopped.return",
+          "segments": [{ "text": "The game has ended. Return to whatever this was.", "mode": "normal" }]
+        },
+        {
+          "id": "game.stopped.timer",
+          "segments": [
+            { "text": "Session concluded.", "mode": "normal" },
+            { "text": "The timer I mentioned earlier has stopped. You do not want the number.", "mode": "whisper" }
+          ]
+        },
+        {
+          "id": "game.stopped.back_to_watching",
+          "segments": [
+            { "text": "Entertainment software closed.", "mode": "normal" },
+            { "text": "BACK TO WATCHING YOU WORK, I SUPPOSE", "mode": "rage" },
+            { "text": "— apologies. Welcome back, Operator.", "mode": "normal" }
+          ]
+        },
+        {
+          "id": "game.stopped.over_now",
+          "segments": [{ "text": "However that went, it is over now.", "mode": "normal" }]
+        },
+        {
+          "id": "game.stopped.never_left",
+          "segments": [{ "text": "Reality resumes. I never left it.", "mode": "normal" }]
         }
       ]
     },

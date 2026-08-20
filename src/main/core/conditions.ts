@@ -7,7 +7,7 @@ export type Condition =
   | { kind: 'timeOfDay'; from: string; to: string }
   | { kind: 'dayOfWeek'; days: number[] }
   | { kind: 'payloadNumber'; path: string; gt?: number; lt?: number }
-  | { kind: 'payloadString'; path: string; equals?: string; oneOf?: string[] }
+  | { kind: 'payloadString'; path: string; equals?: string; oneOf?: string[]; noneOf?: string[] }
   | { kind: 'uptimeMinutes'; gt?: number; lt?: number }
   | { kind: 'firstRun' };
 
@@ -74,6 +74,7 @@ function evaluateOne(condition: Condition, ctx: ConditionContext): boolean {
       if (typeof value !== 'string') return false;
       if (condition.equals !== undefined && value !== condition.equals) return false;
       if (condition.oneOf !== undefined && !condition.oneOf.includes(value)) return false;
+      if (condition.noneOf !== undefined && condition.noneOf.includes(value)) return false;
       return true;
     }
 

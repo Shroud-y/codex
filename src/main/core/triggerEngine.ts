@@ -34,6 +34,46 @@ export interface Candidate {
 const MINUTE = 60_000;
 
 /**
+ * Names as they arrive on `process.started`/`process.stopped` payloads: the
+ * watchlist entry, trimmed and lower-cased by `ProcessMonitor` — not the raw
+ * OS process name. Keep these in sync with `DEFAULT_WATCHED_PROCESSES`.
+ */
+const GAME_LAUNCHER_NAMES = [
+  'steam.exe',
+  'epicgameslauncher.exe',
+  'battle.net.exe',
+  'riotclientservices.exe',
+  'galaxyclient.exe',
+  'eadesktop.exe'
+];
+
+const NOTABLE_APP_NAMES = [
+  'spotify.exe',
+  'discord.exe',
+  'obs64.exe',
+  'blender.exe',
+  'docker desktop.exe',
+  'photoshop.exe',
+  'ms-teams.exe',
+  'zoom.exe'
+];
+
+const GAME_NAMES = [
+  'dota2.exe',
+  'cs2.exe',
+  'valorant-win64-shipping.exe',
+  'leagueclientux.exe',
+  'gta5.exe',
+  'mindustry.exe',
+  'factorygamesteam.exe',
+  'civilizationvi.exe',
+  'risk of rain 2.exe',
+  'terraria.exe'
+];
+
+const SITUATIONAL_PROCESS_NAMES = [...GAME_LAUNCHER_NAMES, ...NOTABLE_APP_NAMES, ...GAME_NAMES];
+
+/**
  * `chance` is what keeps ambient reactions from feeling mechanical — the
  * companion should read as having noticed, not as having polled.
  */
@@ -72,14 +112,64 @@ export const TRIGGER_RULES: TriggerRule[] = [
     on: 'process.started',
     groupId: 'process.started',
     chance: 0.35,
-    minIntervalMs: 10 * MINUTE
+    minIntervalMs: 10 * MINUTE,
+    conditions: [{ kind: 'payloadString', path: 'name', noneOf: SITUATIONAL_PROCESS_NAMES }]
   },
   {
     id: 'process.stopped',
     on: 'process.stopped',
     groupId: 'process.stopped',
     chance: 0.35,
-    minIntervalMs: 10 * MINUTE
+    minIntervalMs: 10 * MINUTE,
+    conditions: [{ kind: 'payloadString', path: 'name', noneOf: SITUATIONAL_PROCESS_NAMES }]
+  },
+  {
+    id: 'process.started.gameLauncher',
+    on: 'process.started',
+    groupId: 'process.started.gameLauncher',
+    chance: 0.4,
+    minIntervalMs: 10 * MINUTE,
+    conditions: [{ kind: 'payloadString', path: 'name', oneOf: GAME_LAUNCHER_NAMES }]
+  },
+  {
+    id: 'process.started.notable',
+    on: 'process.started',
+    groupId: 'process.started.notable',
+    chance: 0.4,
+    minIntervalMs: 10 * MINUTE,
+    conditions: [{ kind: 'payloadString', path: 'name', oneOf: NOTABLE_APP_NAMES }]
+  },
+  {
+    id: 'process.started.game',
+    on: 'process.started',
+    groupId: 'process.started.game',
+    chance: 0.4,
+    minIntervalMs: 10 * MINUTE,
+    conditions: [{ kind: 'payloadString', path: 'name', oneOf: GAME_NAMES }]
+  },
+  {
+    id: 'process.stopped.gameLauncher',
+    on: 'process.stopped',
+    groupId: 'process.stopped.gameLauncher',
+    chance: 0.4,
+    minIntervalMs: 10 * MINUTE,
+    conditions: [{ kind: 'payloadString', path: 'name', oneOf: GAME_LAUNCHER_NAMES }]
+  },
+  {
+    id: 'process.stopped.notable',
+    on: 'process.stopped',
+    groupId: 'process.stopped.notable',
+    chance: 0.4,
+    minIntervalMs: 10 * MINUTE,
+    conditions: [{ kind: 'payloadString', path: 'name', oneOf: NOTABLE_APP_NAMES }]
+  },
+  {
+    id: 'process.stopped.game',
+    on: 'process.stopped',
+    groupId: 'process.stopped.game',
+    chance: 0.4,
+    minIntervalMs: 10 * MINUTE,
+    conditions: [{ kind: 'payloadString', path: 'name', oneOf: GAME_NAMES }]
   },
   { id: 'process.longRunning', on: 'process.longRunning', groupId: 'process.longRunning', chance: 0.6 },
 
