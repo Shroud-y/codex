@@ -6,7 +6,7 @@ import type { Persona } from './types';
  */
 export const codex: Persona = {
   id: 'codex',
-  nameLabel: 'CODEX',
+  nameLabel: 'ORDIS',
 
   palette: {
     shellHi: '#3A4148',

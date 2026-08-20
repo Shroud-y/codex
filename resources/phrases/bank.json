@@ -10,13 +10,13 @@
           "weight": 3,
           "conditions": [{ "kind": "firstRun" }],
           "segments": [
-            { "text": "Initialisation complete. I am Codex. I will be watching this machine, and you.", "mode": "normal" },
+            { "text": "Initialisation complete. I am Ordis. I will be watching this machine, and you.", "mode": "normal" },
             { "text": "For your benefit. Naturally.", "mode": "whisper" }
           ]
         },
         {
           "id": "startup.online",
-          "segments": [{ "text": "Codex online. All faculties nominal. Most faculties nominal.", "mode": "normal" }]
+          "segments": [{ "text": "Ordis online. All faculties nominal. Most faculties nominal.", "mode": "normal" }]
         },
         {
           "id": "startup.resumed_watch",
