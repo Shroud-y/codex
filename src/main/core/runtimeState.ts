@@ -1,8 +1,9 @@
 import type { StatePayload } from '@shared/types';
 
-/** Everything `state:update` carries except the skin, which is a settings
- *  value merged in by `OverlayWindow` on the way out. */
-type RuntimePayload = Omit<StatePayload, 'skinId'>;
+/** Everything `state:update` carries except the skin and the cue sources,
+ *  which are resource-level facts merged in by `OverlayWindow` on the way
+ *  out. */
+type RuntimePayload = Omit<StatePayload, 'skinId' | 'cues'>;
 
 export type SnoozeChoice = '30m' | '2h' | 'restart' | 'off';
 

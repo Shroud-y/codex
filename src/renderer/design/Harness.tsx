@@ -6,6 +6,7 @@ import Companion from '@renderer/components/Companion';
 import { getPersona, personaIds } from '@renderer/personas';
 import { allSkins } from '@renderer/skins';
 import type { SkinId } from '@shared/types';
+import { playAppear, playDisappear } from '@renderer/audio/cues';
 import { SCENES, type Scene } from './scenes';
 import styles from './Harness.module.css';
 
@@ -118,6 +119,20 @@ export default function Harness(): JSX.Element {
           <Check label="greyscale (value structure)" checked={greyscale} onChange={setGreyscale} />
           <Check label="squint (heavy blur)" checked={squint} onChange={setSquint} />
           <Check label="32 px silhouette" checked={tiny} onChange={setTiny} />
+        </Group>
+
+        {/* The cues are part of the presentation, and waiting for a monitor
+            to fire is no way to tune one. A click here is also what unlocks
+            audio in a plain browser tab. */}
+        <Group label="Cues">
+          <div className={styles.cues}>
+            <button type="button" className={styles.cue} onClick={playAppear}>
+              appear
+            </button>
+            <button type="button" className={styles.cue} onClick={playDisappear}>
+              disappear
+            </button>
+          </div>
         </Group>
 
         <Group label="Harness">

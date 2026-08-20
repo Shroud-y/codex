@@ -69,6 +69,29 @@
   font-family: inherit;
 }
 
+.cues {
+  display: flex;
+  gap: 8px;
+}
+
+.cue {
+  flex: 1;
+  padding: 6px 4px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: inherit;
+  background: #0d1114;
+  border: 1px solid #2c363c;
+  cursor: pointer;
+}
+
+.cue:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
 .note {
   font-size: 11px;
   line-height: 1.5;

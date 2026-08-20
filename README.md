@@ -70,6 +70,56 @@ automatically — no setting, no code change. Missing files fall back to
 text-only per phrase, so a partially voiced bank works. See
 `tools/render-voice/README.md` for the intended offline render pipeline.
 
+## Cue sounds
+
+The overlay's arrival and departure sounds are synthesised in the renderer at
+runtime (`renderer/audio/cues.ts`), not shipped as files. Both are built from
+the same four voices — a square tick, a sub thump, a bandpassed noise sweep and
+a detuned pair of triangles — so they read as one machine: appear runs the tone
+up from 330 Hz to 1 kHz over ~360 ms, disappear runs it back down from 750 Hz
+in ~255 ms at half the level. They fire off the same visibility edge as the
+entry and exit animations (`useOverlaySfx`), so a dismissal, an interrupt and a
+natural finish all sound the same.
+
+**The audio context is opened per cue and closed 3 s later.** Measured in
+Electron on this machine over 20 s spans, summed across the app's processes:
+
+| State | Idle CPU |
+|---|---|
+| No `AudioContext` | 0.09% |
+| One idle `AudioContext` | 1.86% |
+| One *suspended* `AudioContext` | 1.02% |
+
+An open context therefore costs sixteen times the app's entire idle draw, and
+suspending it recovers only half — so it has to be closed. Reopening costs
+about 30 ms before the audio clock starts (230 ms for the first one in the
+process), which is under two frames of a 200 ms entry animation.
+
+Main passes `--autoplay-policy=no-user-gesture-required`: the overlay is
+click-through and never receives a click, so without it Chromium leaves the
+context suspended and no cue is ever heard in a packaged build.
+
+**Either cue can be replaced by a file** without touching the code. Drop
+`appear.ogg` (or `.wav`, `.mp3`) into `resources/audio/cues` and the overlay
+plays that instead of synthesising; the two are resolved independently, so
+replacing one and leaving the other synthesised is fine. Main looks once at
+startup — `resolveCueSources`, `tests/cueAudio.test.ts` — and sends the URLs
+with `state:update`, so the renderer never probes the disk. The files are
+served over the existing `codex-audio://` scheme, on host `cue` rather than
+`phrase`. A file that turns out to be unplayable logs nothing but falls back
+to the synthesised cue and stays there for the session. See
+`resources/audio/cues/README.md`.
+
+Verified in Electron against a `file://` page, which is how a packaged build
+loads the overlay: a cue file loads over the scheme and plays without the
+synthesiser running, a missing file, an unknown host and an encoded `..`
+traversal are all refused, and a broken URL falls back to the synthesised cue
+(the element's `error` arrives in about 8 ms).
+
+The design harness has **appear** / **disappear** buttons under *Cues*, so the
+sounds can be tuned without waiting for a monitor to fire. It runs outside
+Electron, so it always plays the synthesised pair, never a file.
+
 ## Debug panel
 
 Dev builds only, from the tray. Live event log, a dropdown that fires any

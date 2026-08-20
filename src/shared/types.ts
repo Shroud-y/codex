@@ -51,12 +51,25 @@ export type SkinId = 'eye';
 
 export const SKIN_IDS: readonly SkinId[] = ['eye'];
 
+/**
+ * Where the overlay's two cue sounds come from. `null` means no file was
+ * found and the renderer synthesises that cue itself.
+ *
+ * Resolved once at startup, like the voice engine: dropping a file in takes
+ * effect on the next launch.
+ */
+export interface CueSources {
+  appear: string | null;
+  disappear: string | null;
+}
+
 /** main → renderer: 'state:update' */
 export interface StatePayload {
   muted: boolean;
   snoozedUntil: number | null;
   /** Switchable at runtime from settings; no restart. */
   skinId: SkinId;
+  cues: CueSources;
 }
 
 /** renderer → main: 'speech:finished' / 'speech:dismissed' */

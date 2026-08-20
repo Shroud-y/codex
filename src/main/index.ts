@@ -51,6 +51,7 @@ import { StateStore } from './settings/stateStore';
 import { configureLogger, createLogger } from './log/logger';
 import { NullVoiceEngine } from './voice/NullVoiceEngine';
 import { AUDIO_SCHEME, PrerenderedVoiceEngine, audioDirHasFiles } from './voice/PrerenderedVoiceEngine';
+import { resolveCueSources } from './voice/cueAudio';
 import type { VoiceEngine } from './voice/VoiceEngine';
 import { paths } from './paths';
 
@@ -60,6 +61,12 @@ const log = createLogger('main');
 const UNPROMPTED_GROUP = 'ambient.unprompted';
 /** Phase 2's command palette gets a home now so it costs nothing later (§19). */
 const COMMAND_PALETTE_ACCELERATOR = 'CommandOrControl+Alt+Shift+C';
+
+// A Web Audio context in a page that never receives a click stays suspended
+// under Chromium's default autoplay policy, and the overlay is click-through:
+// it can never get that gesture. Without this the appear/disappear cues are
+// silent in a packaged build while working fine in the design harness.
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 // Must run before `app.whenReady` — the overlay loads audio through this scheme.
 protocol.registerSchemesAsPrivileged([
@@ -117,6 +124,15 @@ async function bootstrap(): Promise<void> {
   overlay.create(OverlayWindow.preloadPath());
   overlay.setOffsets(settingsStore.current.overlay);
   overlay.setSkin(settingsStore.current.skinId);
+
+  // Files win over the synthesised cues, checked once here — same bargain as
+  // the voice engine, and the same restart to pick a new one up.
+  const cues = resolveCueSources(paths.cueDir());
+  overlay.setCues(cues);
+  log.info(
+    `overlay cues: appear ${cues.appear ? 'file' : 'synthesised'}, ` +
+      `disappear ${cues.disappear ? 'file' : 'synthesised'}`
+  );
 
   const probe = new PresenceProbe(paths.probeDir());
   probe.start();
@@ -482,17 +498,24 @@ function syntheticPayload(type: string): Record<string, unknown> {
   }
 }
 
-/** Serves `codex-audio://phrase/<id>.ogg` out of the resources folder. */
+/**
+ * Serves `codex-audio://phrase/<id>.ogg` from `resources/audio`, and
+ * `codex-audio://cue/<name>.<ext>` from `resources/audio/cues`. The host is
+ * the only thing that picks the directory; any other host is refused.
+ */
 function registerAudioProtocol(): void {
   protocol.handle(AUDIO_SCHEME, async (request) => {
     try {
       const url = new URL(request.url);
+      const root =
+        url.host === 'phrase' ? paths.audioDir() : url.host === 'cue' ? paths.cueDir() : null;
+      if (!root) return new Response('not found', { status: 404 });
       const fileName = decodeURIComponent(url.pathname.replace(/^\//, ''));
       // Path traversal guard: only a bare filename is ever valid here.
       if (fileName.includes('/') || fileName.includes('\\') || fileName.includes('..')) {
         return new Response('forbidden', { status: 403 });
       }
-      const filePath = join(paths.audioDir(), fileName);
+      const filePath = join(root, fileName);
       return await net.fetch(pathToFileURL(filePath).toString());
     } catch (err) {
       log.debug(`audio protocol failed: ${String(err)}`);

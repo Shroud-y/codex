@@ -1,7 +1,7 @@
 import { BrowserWindow, screen } from 'electron';
 import { join } from 'node:path';
 import { IPC } from '@shared/ipc';
-import type { SkinId, SpeechShowPayload, StatePayload } from '@shared/types';
+import type { CueSources, SkinId, SpeechShowPayload, StatePayload } from '@shared/types';
 import type { OverlayPresenter } from '../core/speechDirector';
 import { createLogger } from '../log/logger';
 import { ClickThroughController } from './clickThrough';
@@ -24,7 +24,11 @@ export class OverlayWindow implements OverlayPresenter {
   private ready = false;
   private pending: SpeechShowPayload | null = null;
   private skinId: SkinId = 'eye';
-  private runtimeState: Omit<StatePayload, 'skinId'> = { muted: false, snoozedUntil: null };
+  private cues: CueSources = { appear: null, disappear: null };
+  private runtimeState: Omit<StatePayload, 'skinId' | 'cues'> = {
+    muted: false,
+    snoozedUntil: null
+  };
 
   create(preloadPath: string): BrowserWindow {
     if (this.win && !this.win.isDestroyed()) return this.win;
@@ -129,7 +133,17 @@ export class OverlayWindow implements OverlayPresenter {
     this.pushState();
   }
 
-  sendState(state: Omit<StatePayload, 'skinId'>): void {
+  /**
+   * Which files, if any, the overlay should play instead of the cues it
+   * synthesises. Resolved once at startup and pushed with the rest of the
+   * state, so the renderer never has to probe for them.
+   */
+  setCues(cues: CueSources): void {
+    this.cues = cues;
+    this.pushState();
+  }
+
+  sendState(state: Omit<StatePayload, 'skinId' | 'cues'>): void {
     this.runtimeState = state;
     this.pushState();
   }
@@ -137,7 +151,8 @@ export class OverlayWindow implements OverlayPresenter {
   private pushState(): void {
     this.browserWindow?.webContents.send(IPC.stateUpdate, {
       ...this.runtimeState,
-      skinId: this.skinId
+      skinId: this.skinId,
+      cues: this.cues
     } satisfies StatePayload);
   }
 

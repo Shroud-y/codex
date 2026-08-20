@@ -12,6 +12,7 @@ function resourceRoot(): string {
 export const paths = {
   phraseBank: (): string => join(resourceRoot(), 'phrases', 'bank.json'),
   audioDir: (): string => join(resourceRoot(), 'audio'),
+  cueDir: (): string => join(resourceRoot(), 'audio', 'cues'),
   iconsDir: (): string => join(resourceRoot(), 'icons'),
   probeDir: (): string => join(resourceRoot(), 'probe'),
   settingsFile: (): string => join(app.getPath('userData'), 'settings.json'),

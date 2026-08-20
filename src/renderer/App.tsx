@@ -1,14 +1,18 @@
 import { useEffect, useRef } from 'react';
 import Companion from './components/Companion';
 import { getPersona } from './personas';
-import { useSkinId } from './hooks/useOverlayState';
+import { useCueSources, useSkinId } from './hooks/useOverlayState';
+import { useOverlaySfx } from './hooks/useOverlaySfx';
 import { useSpeech } from './hooks/useSpeech';
 
 export default function App(): JSX.Element {
   const view = useSpeech();
   const skinId = useSkinId();
+  const cues = useCueSources();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastInteractive = useRef(false);
+
+  useOverlaySfx(view.visible, cues);
 
   /* §10.2 — mouse events still arrive thanks to `forward: true`; report
      whether the cursor is over an interactive element and let main debounce. */
