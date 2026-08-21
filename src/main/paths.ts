@@ -21,6 +21,5 @@ export const paths = {
 
   presetsRoot: (): string => join(app.getPath('userData'), 'presets'),
   presetDir: (id: string): string => join(paths.presetsRoot(), id),
-  presetBankFile: (id: string): string => join(paths.presetDir(id), 'bank.json'),
-  presetGifFile: (id: string): string => join(paths.presetDir(id), 'appearance.gif')
+  presetBankFile: (id: string): string => join(paths.presetDir(id), 'bank.json')
 };

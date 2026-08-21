@@ -26,13 +26,13 @@ export class OverlayWindow implements OverlayPresenter {
   private skinId: SkinId = 'eye';
   private cues: CueSources = { appear: null, disappear: null };
   private presetName = 'Ordis';
-  private appearanceGifUrl: string | null = null;
-  private cueVolume = 0.8;
+  private appearanceVideoUrl: string | null = null;
+  private cueVolume = 1;
   private appearSoundEnabled = true;
   private disappearSoundEnabled = true;
   private runtimeState: Omit<
     StatePayload,
-    'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl' | 'cueVolume' | 'appearSoundEnabled' | 'disappearSoundEnabled'
+    'skinId' | 'cues' | 'presetName' | 'appearanceVideoUrl' | 'cueVolume' | 'appearSoundEnabled' | 'disappearSoundEnabled'
   > = {
     muted: false,
     snoozedUntil: null
@@ -134,7 +134,7 @@ export class OverlayWindow implements OverlayPresenter {
    * Everything the active preset determines: its skin (settings values, not
    * runtime ones, so merged in here rather than threaded through
    * `RuntimeState`), its cue sounds and its display name, plus a custom
-   * appearance GIF if it has one — which replaces the skin entirely.
+   * appearance video if it has one — which replaces the skin entirely.
    * Resolved by main whenever the active preset changes (or on startup) and
    * pushed together, so the renderer never has to reconcile a partial update.
    */
@@ -142,12 +142,12 @@ export class OverlayWindow implements OverlayPresenter {
     name: string;
     skinId: SkinId;
     cues: CueSources;
-    gifUrl: string | null;
+    videoUrl: string | null;
   }): void {
     const unchanged =
       preset.name === this.presetName &&
       preset.skinId === this.skinId &&
-      preset.gifUrl === this.appearanceGifUrl &&
+      preset.videoUrl === this.appearanceVideoUrl &&
       preset.cues.appear === this.cues.appear &&
       preset.cues.disappear === this.cues.disappear;
     if (unchanged) return;
@@ -155,7 +155,7 @@ export class OverlayWindow implements OverlayPresenter {
     this.presetName = preset.name;
     this.skinId = preset.skinId;
     this.cues = preset.cues;
-    this.appearanceGifUrl = preset.gifUrl;
+    this.appearanceVideoUrl = preset.videoUrl;
     this.pushState();
   }
 
@@ -184,7 +184,7 @@ export class OverlayWindow implements OverlayPresenter {
   sendState(
     state: Omit<
       StatePayload,
-      'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl' | 'cueVolume' | 'appearSoundEnabled' | 'disappearSoundEnabled'
+      'skinId' | 'cues' | 'presetName' | 'appearanceVideoUrl' | 'cueVolume' | 'appearSoundEnabled' | 'disappearSoundEnabled'
     >
   ): void {
     this.runtimeState = state;
@@ -197,7 +197,7 @@ export class OverlayWindow implements OverlayPresenter {
       skinId: this.skinId,
       cues: this.cues,
       presetName: this.presetName,
-      appearanceGifUrl: this.appearanceGifUrl,
+      appearanceVideoUrl: this.appearanceVideoUrl,
       cueVolume: this.cueVolume,
       appearSoundEnabled: this.appearSoundEnabled,
       disappearSoundEnabled: this.disappearSoundEnabled

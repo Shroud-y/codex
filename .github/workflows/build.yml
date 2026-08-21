@@ -38,12 +38,19 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             IS_DRAFT=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
             if [ "$IS_DRAFT" = "true" ]; then
-              gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+              gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes
             else
               echo "Release '$TAG' was published (no longer a draft) - creating a fresh tag instead of touching it."
               TAG="latest-build-$(git rev-parse --short HEAD)"
             fi
           fi
+          # The tag can outlive its release (a previous run's --cleanup-tag
+          # 422ing on the ref alone, or a manually deleted release) — `gh
+          # release create --target` then fails, because a target is only
+          # accepted when the tag doesn't exist yet. Deleting the ref directly
+          # and tolerating "already gone" guarantees the create below always
+          # gets a genuinely fresh tag.
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" >/dev/null 2>&1 || true
           gh release create "$TAG" release/*.exe \
             --repo "$GITHUB_REPOSITORY" \
             --title "Latest build" \

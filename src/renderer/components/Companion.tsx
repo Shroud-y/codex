@@ -13,8 +13,8 @@ export interface CompanionProps {
   skinId?: SkinId;
   /** Overrides the persona's static name label with the active preset's, from runtime state. */
   displayName?: string;
-  /** A preset's custom appearance GIF; replaces the shader skin entirely when set. */
-  gifUrl?: string | null;
+  /** A preset's custom appearance video; replaces the shader skin entirely when set. */
+  videoUrl?: string | null;
   segments: PhraseSegment[];
   activeIndex: number;
   revealed: number;
@@ -45,7 +45,7 @@ export default function Companion({
   persona,
   skinId,
   displayName,
-  gifUrl,
+  videoUrl,
   segments,
   activeIndex,
   revealed,
@@ -84,7 +84,7 @@ export default function Companion({
             <CharacterUnit
               persona={persona}
               skinId={skinId}
-              gifUrl={gifUrl}
+              videoUrl={videoUrl}
               mode={mode}
               speaking={visible && typing}
               reducedMotion={reducedMotion}

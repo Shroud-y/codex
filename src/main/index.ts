@@ -79,6 +79,12 @@ import { NullVoiceEngine } from './voice/NullVoiceEngine';
 import { AUDIO_SCHEME, PrerenderedVoiceEngine, audioDirHasFiles } from './voice/PrerenderedVoiceEngine';
 import { CUE_EXTENSIONS, resolveCueSources, resolvePresetCueSources, type CueId } from './voice/cueAudio';
 import type { VoiceEngine } from './voice/VoiceEngine';
+import {
+  VIDEO_EXTENSIONS,
+  presetVideoFileName,
+  resolvePresetVideoFile,
+  type VideoExtension
+} from './media/appearanceVideo';
 import { paths } from './paths';
 
 const log = createLogger('main');
@@ -88,11 +94,11 @@ const UNPROMPTED_GROUP = 'ambient.unprompted';
 /** Phase 2's command palette gets a home now so it costs nothing later (§19). */
 const COMMAND_PALETTE_ACCELERATOR = 'CommandOrControl+Alt+Shift+C';
 
-/** Custom scheme a preset's appearance GIF loads through, same reasoning as `AUDIO_SCHEME`. */
+/** Custom scheme a preset's appearance video (and its own cue sounds) load through, same reasoning as `AUDIO_SCHEME`. */
 const ASSET_SCHEME = 'codex-asset';
 
-/** A user-supplied GIF this large would cost real overlay-renderer memory (§ electron-measurement-traps). */
-const MAX_GIF_BYTES = 8 * 1024 * 1024;
+/** A user-supplied video this large would cost real overlay-renderer memory (§ electron-measurement-traps). */
+const MAX_VIDEO_BYTES = 12 * 1024 * 1024;
 
 // A Web Audio context in a page that never receives a click stays suspended
 // under Chromium's default autoplay policy, and the overlay is click-through:
@@ -250,7 +256,7 @@ async function bootstrap(): Promise<void> {
 
   // Now that the director and trigger engine exist, resolve and apply the
   // preset settings actually named at startup — this is what pushes the
-  // real bank/cues/skin/name/gif to the overlay for the first time.
+  // real bank/cues/skin/name/video to the overlay for the first time.
   applyPreset(settingsStore.current.activePresetId);
 
   bus.on('*', (event: AppEvent) => {
@@ -401,7 +407,7 @@ async function bootstrap(): Promise<void> {
     return settingsStore.update(payload as Partial<Settings>);
   });
 
-  const presetAssetKindSchema = z.enum(['bank', 'appearSound', 'disappearSound', 'gif']);
+  const presetAssetKindSchema = z.enum(['bank', 'appearSound', 'disappearSound', 'video']);
   const presetIdSchema = z.object({ presetId: z.string().min(1) });
 
   ipcMain.handle(IPC.presetsPickAsset, async (_event, payload: unknown) => {
@@ -418,7 +424,7 @@ async function bootstrap(): Promise<void> {
 
   ipcMain.handle(IPC.presetsAssetStatus, (_event, payload: unknown) => {
     const parsed = presetIdSchema.safeParse(payload);
-    if (!parsed.success) return { hasBank: false, hasAppear: false, hasDisappear: false, hasGif: false };
+    if (!parsed.success) return { hasBank: false, hasAppear: false, hasDisappear: false, hasVideo: false };
     return assetStatusFor(parsed.data.presetId);
   });
 
@@ -504,7 +510,7 @@ async function bootstrap(): Promise<void> {
     preset: Preset;
     bank: PhraseBankIndex;
     cues: CueSources;
-    gifUrl: string | null;
+    videoUrl: string | null;
   } {
     const preset = findPreset(id);
 
@@ -524,10 +530,10 @@ async function bootstrap(): Promise<void> {
       disappear: presetCues.disappear ?? defaultCues.disappear
     };
 
-    const gifFile = paths.presetGifFile(preset.id);
-    const gifUrl = existsSync(gifFile) ? `${ASSET_SCHEME}://gif/${preset.id}` : null;
+    const videoFileName = presetVideoFileName(paths.presetDir(preset.id));
+    const videoUrl = videoFileName ? `${ASSET_SCHEME}://video/${preset.id}/${videoFileName}` : null;
 
-    return { preset, bank, cues, gifUrl };
+    return { preset, bank, cues, videoUrl };
   }
 
   /** Swaps in whichever preset is now active — startup and every settings change alike. */
@@ -539,7 +545,7 @@ async function bootstrap(): Promise<void> {
       name: resolved.preset.name,
       skinId: resolved.preset.skinId,
       cues: resolved.cues,
-      gifUrl: resolved.gifUrl
+      videoUrl: resolved.videoUrl
     });
   }
 
@@ -547,6 +553,14 @@ async function bootstrap(): Promise<void> {
   function clearCueFiles(dir: string, cueId: CueId): void {
     for (const ext of CUE_EXTENSIONS) {
       const file = join(dir, `${cueId}${ext}`);
+      if (existsSync(file)) unlinkSync(file);
+    }
+  }
+
+  /** Same reasoning as `clearCueFiles`: an upload switching container (`.webm` <-> `.mp4`) must not leave the old one behind for `resolvePresetVideoFile` to prefer. */
+  function clearVideoFiles(dir: string): void {
+    for (const ext of VIDEO_EXTENSIONS) {
+      const file = join(dir, `appearance${ext}`);
       if (existsSync(file)) unlinkSync(file);
     }
   }
@@ -568,8 +582,8 @@ async function bootstrap(): Promise<void> {
     const filters =
       kind === 'bank'
         ? [{ name: 'Phrase bank', extensions: ['json'] }]
-        : kind === 'gif'
-          ? [{ name: 'GIF', extensions: ['gif'] }]
+        : kind === 'video'
+          ? [{ name: 'Video', extensions: ['webm', 'mp4'] }]
           : [{ name: 'Audio', extensions: ['ogg', 'wav', 'mp3'] }];
 
     const parentWindow = settingsWindow.browserWindow;
@@ -589,12 +603,15 @@ async function bootstrap(): Promise<void> {
         const raw = JSON.parse(readFileSync(source, 'utf8')) as unknown;
         parsePhraseBank(raw, source);
         copyAtomic(source, paths.presetBankFile(presetId));
-      } else if (kind === 'gif') {
-        if (ext !== '.gif') return { ok: false, error: 'expected a .gif file' };
-        if (statSync(source).size > MAX_GIF_BYTES) {
-          return { ok: false, error: `GIF is larger than ${MAX_GIF_BYTES / (1024 * 1024)} MB` };
+      } else if (kind === 'video') {
+        if (!(VIDEO_EXTENSIONS as readonly string[]).includes(ext)) {
+          return { ok: false, error: 'expected a .webm or .mp4 file' };
         }
-        copyAtomic(source, paths.presetGifFile(presetId));
+        if (statSync(source).size > MAX_VIDEO_BYTES) {
+          return { ok: false, error: `Video is larger than ${MAX_VIDEO_BYTES / (1024 * 1024)} MB` };
+        }
+        clearVideoFiles(dir);
+        copyAtomic(source, join(dir, `appearance${ext as VideoExtension}`));
       } else {
         if (!(CUE_EXTENSIONS as readonly string[]).includes(ext)) {
           return { ok: false, error: 'expected a .ogg, .wav or .mp3 file' };
@@ -624,9 +641,8 @@ async function bootstrap(): Promise<void> {
     if (kind === 'bank') {
       const file = paths.presetBankFile(presetId);
       if (existsSync(file)) unlinkSync(file);
-    } else if (kind === 'gif') {
-      const file = paths.presetGifFile(presetId);
-      if (existsSync(file)) unlinkSync(file);
+    } else if (kind === 'video') {
+      clearVideoFiles(dir);
     } else {
       clearCueFiles(dir, kind === 'appearSound' ? 'appear' : 'disappear');
     }
@@ -643,7 +659,7 @@ async function bootstrap(): Promise<void> {
       hasBank: existsSync(paths.presetBankFile(presetId)),
       hasAppear: hasCue('appear'),
       hasDisappear: hasCue('disappear'),
-      hasGif: existsSync(paths.presetGifFile(presetId))
+      hasVideo: resolvePresetVideoFile(dir) !== null
     };
   }
 
@@ -673,16 +689,7 @@ async function bootstrap(): Promise<void> {
         const knownPreset = (presetId: string): boolean =>
           settingsStore.current.presets.some((p) => p.id === presetId);
 
-        if (url.host === 'gif') {
-          const presetId = decodeURIComponent(url.pathname.replace(/^\//, ''));
-          if (presetId.includes('/') || presetId.includes('\\') || presetId.includes('..')) {
-            return new Response('forbidden', { status: 403 });
-          }
-          if (!knownPreset(presetId)) return new Response('not found', { status: 404 });
-          return await net.fetch(pathToFileURL(paths.presetGifFile(presetId)).toString());
-        }
-
-        if (url.host === 'cue') {
+        if (url.host === 'cue' || url.host === 'video') {
           const [presetId, fileName] = decodeURIComponent(url.pathname.replace(/^\//, '')).split('/');
           if (!presetId || !fileName) return new Response('not found', { status: 404 });
           // Path traversal guard: the preset id and filename must each be a bare segment.

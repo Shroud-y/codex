@@ -48,17 +48,17 @@ export function usePresetName(): string | undefined {
   return presetName;
 }
 
-/** Set when the active preset has a custom appearance GIF, replacing the skin entirely. */
-export function useAppearanceGifUrl(): string | null | undefined {
-  const [gifUrl, setGifUrl] = useState<string | null | undefined>(undefined);
+/** Set when the active preset has a custom appearance video, replacing the skin entirely. */
+export function useAppearanceVideoUrl(): string | null | undefined {
+  const [videoUrl, setVideoUrl] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     const api = window.codex;
     if (!api) return;
-    return api.onStateUpdate((payload) => setGifUrl(payload.appearanceGifUrl));
+    return api.onStateUpdate((payload) => setVideoUrl(payload.appearanceVideoUrl));
   }, []);
 
-  return gifUrl;
+  return videoUrl;
 }
 
 export interface AudioOptions {

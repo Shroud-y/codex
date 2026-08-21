@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import type { SkinId, SpeechMode } from '@shared/types';
 import type { Persona } from '@renderer/personas';
 import { getSkin } from '@renderer/skins';
-import GifAppearance from './GifAppearance';
+import VideoAppearance from './VideoAppearance';
 import styles from './CharacterUnit.module.css';
 
 export interface CharacterUnitProps {
@@ -10,10 +10,10 @@ export interface CharacterUnitProps {
   /** Overrides the persona's default. Comes from settings at runtime. */
   skinId?: SkinId;
   /**
-   * A preset's custom appearance GIF. When set, it replaces the shader skin
-   * entirely for this unit — nothing else about the layout changes.
+   * A preset's custom appearance video. When set, it replaces the shader
+   * skin entirely for this unit — nothing else about the layout changes.
    */
-  gifUrl?: string | null;
+  videoUrl?: string | null;
   /** `null` when idle — nothing is being said. */
   mode: SpeechMode | null;
   speaking: boolean;
@@ -34,7 +34,7 @@ export interface CharacterUnitProps {
 export default function CharacterUnit({
   persona,
   skinId,
-  gifUrl,
+  videoUrl,
   mode,
   speaking,
   reducedMotion,
@@ -60,7 +60,7 @@ export default function CharacterUnit({
     <div
       className={styles.unit}
       style={style}
-      data-skin={gifUrl ? 'gif' : skin.id}
+      data-skin={videoUrl ? 'video' : skin.id}
       data-mode={mode ?? 'normal'}
       data-speaking={speaking ? 'true' : 'false'}
       data-unlit={unlit ? 'true' : 'false'}
@@ -68,8 +68,8 @@ export default function CharacterUnit({
       data-bob={bob ? 'true' : 'false'}
       aria-hidden="true"
     >
-      {gifUrl ? (
-        <GifAppearance src={gifUrl} canvas={skin.canvas} />
+      {videoUrl ? (
+        <VideoAppearance src={videoUrl} canvas={skin.canvas} />
       ) : (
         <Skin palette={palette} mode={mode ?? 'normal'} speaking={speaking} reducedMotion={reducedMotion} unlit={unlit} />
       )}

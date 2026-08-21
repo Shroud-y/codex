@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import Companion from './components/Companion';
 import { getPersona } from './personas';
 import {
-  useAppearanceGifUrl,
+  useAppearanceVideoUrl,
   useAudioOptions,
   useCueSources,
   usePresetName,
@@ -16,7 +16,7 @@ export default function App(): JSX.Element {
   const skinId = useSkinId();
   const cues = useCueSources();
   const presetName = usePresetName();
-  const gifUrl = useAppearanceGifUrl();
+  const videoUrl = useAppearanceVideoUrl();
   const audioOptions = useAudioOptions();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastInteractive = useRef(false);
@@ -73,7 +73,7 @@ export default function App(): JSX.Element {
         persona={getPersona(view.speech?.personaId)}
         skinId={skinId}
         displayName={presetName}
-        gifUrl={gifUrl}
+        videoUrl={videoUrl}
         segments={view.speech?.segments ?? []}
         activeIndex={view.activeIndex}
         revealed={view.revealed}

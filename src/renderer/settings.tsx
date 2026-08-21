@@ -15,7 +15,7 @@ const ASSET_ROWS: { kind: PresetAssetKind; label: string; statusKey: keyof Prese
   { kind: 'bank', label: 'Phrase bank (.json)', statusKey: 'hasBank' },
   { kind: 'appearSound', label: 'Appear sound', statusKey: 'hasAppear' },
   { kind: 'disappearSound', label: 'Disappear sound', statusKey: 'hasDisappear' },
-  { kind: 'gif', label: 'Appearance GIF', statusKey: 'hasGif' }
+  { kind: 'video', label: 'Appearance video (.webm/.mp4)', statusKey: 'hasVideo' }
 ];
 
 const FREQUENCIES: FrequencyProfile[] = ['chatty', 'balanced', 'reserved', 'rare'];
@@ -263,7 +263,7 @@ function SettingsPanel(): JSX.Element {
 
 /**
  * Ordis is the built-in preset — renamable, not deletable. New presets
- * default to the name 'Shard'. Custom bank/sounds/GIF are not settings
+ * default to the name 'Shard'. Custom bank/sounds/video are not settings
  * fields: their presence on disk is what main resolves, so this panel only
  * ever asks "does a custom one exist" and offers to add or remove one.
  */
@@ -341,7 +341,7 @@ function PresetsSection({
           const isBuiltin = preset.id === BUILTIN_PRESET_ID;
           const isActive = preset.id === settings.activePresetId;
           const presetStatus = status[preset.id];
-          const hasGif = presetStatus?.hasGif ?? false;
+          const hasVideo = presetStatus?.hasVideo ?? false;
 
           return (
             <div className="row" key={preset.id} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
@@ -360,7 +360,7 @@ function PresetsSection({
                   />
                   Active
                 </label>
-                {!hasGif ? (
+                {!hasVideo ? (
                   <select
                     value={preset.skinId}
                     onChange={(event) => setPresetSkin(preset.id, event.target.value as SkinId)}
@@ -372,7 +372,7 @@ function PresetsSection({
                     ))}
                   </select>
                 ) : (
-                  <span className="muted">custom GIF appearance</span>
+                  <span className="muted">custom video appearance</span>
                 )}
                 {!isBuiltin ? (
                   <button type="button" disabled={busy === preset.id} onClick={() => deletePreset(preset.id)}>

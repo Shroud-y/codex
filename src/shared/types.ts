@@ -72,8 +72,8 @@ export interface StatePayload {
   cues: CueSources;
   /** The active preset's display name, e.g. 'Ordis' or a user's rename. */
   presetName: string;
-  /** Set when the active preset has a custom appearance GIF, which replaces the skin entirely. */
-  appearanceGifUrl: string | null;
+  /** Set when the active preset has a custom appearance video, which replaces the skin entirely. */
+  appearanceVideoUrl: string | null;
   /** 0 (silent) to 1 (full), from `Settings.overlay.cueVolume`. */
   cueVolume: number;
   appearSoundEnabled: boolean;
@@ -108,7 +108,7 @@ export interface OverlaySettings {
 /**
  * A switchable character profile. `'codex'` is the built-in Ordis preset —
  * renamable but not deletable. Custom phrase bank, cue sounds and appearance
- * GIF are not stored here: their presence on disk under
+ * video are not stored here: their presence on disk under
  * `userData/presets/<id>/` is what decides whether they override the
  * defaults, the same bargain `resolveCueSources` already makes for the
  * shipped cue sounds.
@@ -116,14 +116,14 @@ export interface OverlaySettings {
 export interface Preset {
   id: string;
   name: string;
-  /** Fallback shader skin, used only when the preset has no appearance GIF. */
+  /** Fallback shader skin, used only when the preset has no appearance video. */
   skinId: SkinId;
 }
 
 export const BUILTIN_PRESET_ID = 'codex';
 
 /** Which of a preset's overridable assets an operation targets. */
-export type PresetAssetKind = 'bank' | 'appearSound' | 'disappearSound' | 'gif';
+export type PresetAssetKind = 'bank' | 'appearSound' | 'disappearSound' | 'video';
 
 export type PresetAssetResult = { ok: true } | { ok: false; error: string };
 
@@ -132,7 +132,7 @@ export interface PresetAssetStatus {
   hasBank: boolean;
   hasAppear: boolean;
   hasDisappear: boolean;
-  hasGif: boolean;
+  hasVideo: boolean;
 }
 
 export interface Settings {
