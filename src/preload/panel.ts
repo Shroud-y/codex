@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { DebugSnapshot, Settings } from '@shared/types';
+import type {
+  DebugSnapshot,
+  PresetAssetKind,
+  PresetAssetResult,
+  PresetAssetStatus,
+  Settings
+} from '@shared/types';
 
 /**
  * Surface for the two ordinary windows: settings and the debug panel.
@@ -12,7 +18,11 @@ const CHANNEL = {
   settingsUpdated: 'settings:updated',
   debugSnapshot: 'debug:snapshot',
   debugRequestSnapshot: 'debug:requestSnapshot',
-  debugFireEvent: 'debug:fireEvent'
+  debugFireEvent: 'debug:fireEvent',
+  presetsPickAsset: 'presets:pickAsset',
+  presetsClearAsset: 'presets:clearAsset',
+  presetsAssetStatus: 'presets:assetStatus',
+  presetsDelete: 'presets:delete'
 } as const;
 
 const api = {
@@ -42,6 +52,22 @@ const api = {
 
   fireEvent(type: string): void {
     ipcRenderer.send(CHANNEL.debugFireEvent, { type: String(type) });
+  },
+
+  pickPresetAsset(presetId: string, kind: PresetAssetKind): Promise<PresetAssetResult> {
+    return ipcRenderer.invoke(CHANNEL.presetsPickAsset, { presetId, kind }) as Promise<PresetAssetResult>;
+  },
+
+  clearPresetAsset(presetId: string, kind: PresetAssetKind): Promise<PresetAssetResult> {
+    return ipcRenderer.invoke(CHANNEL.presetsClearAsset, { presetId, kind }) as Promise<PresetAssetResult>;
+  },
+
+  getPresetAssetStatus(presetId: string): Promise<PresetAssetStatus> {
+    return ipcRenderer.invoke(CHANNEL.presetsAssetStatus, { presetId }) as Promise<PresetAssetStatus>;
+  },
+
+  deletePreset(presetId: string): Promise<PresetAssetResult> {
+    return ipcRenderer.invoke(CHANNEL.presetsDelete, { presetId }) as Promise<PresetAssetResult>;
   }
 };
 

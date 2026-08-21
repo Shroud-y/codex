@@ -1,16 +1,23 @@
 import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
 import { z } from 'zod';
-import type { Settings } from '@shared/types';
+import { BUILTIN_PRESET_ID, type Settings } from '@shared/types';
 import { createLogger } from '../log/logger';
 
 const log = createLogger('settings');
 
 const clockSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
+const presetSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  skinId: z.enum(['eye'])
+});
+
 const settingsSchema = z.object({
-  version: z.literal(2),
+  version: z.literal(3),
   startWithSystem: z.boolean(),
-  skinId: z.enum(['eye']),
+  presets: z.array(presetSchema).min(1),
+  activePresetId: z.string().min(1),
   frequencyProfile: z.enum(['chatty', 'balanced', 'reserved', 'rare']),
   quietHours: z.object({ enabled: z.boolean(), from: clockSchema, to: clockSchema }),
   suppressOnFullscreen: z.boolean(),
@@ -65,9 +72,10 @@ export const DEFAULT_WATCHED_PROCESSES = [
 
 export function defaultSettings(downloadsDir: string): Settings {
   return {
-    version: 2,
+    version: 3,
     startWithSystem: true,
-    skinId: 'eye',
+    presets: [{ id: BUILTIN_PRESET_ID, name: 'Ordis', skinId: 'eye' }],
+    activePresetId: BUILTIN_PRESET_ID,
     frequencyProfile: 'balanced',
     quietHours: { enabled: true, from: '23:00', to: '08:00' },
     suppressOnFullscreen: true,
@@ -86,10 +94,23 @@ export function defaultSettings(downloadsDir: string): Settings {
  * this the stored `skinId` would fail validation, and a failed parse discards
  * the *whole* file — an appearance change would silently take the user's quiet
  * hours, watch lists and folders with it.
+ *
+ * Version 3 moves the single global `skinId` onto a preset — the built-in
+ * Ordis one — since appearance is now per-preset. The old value is kept
+ * rather than reset to `'eye'`, so an existing user's choice survives.
  */
 type RawSettings = Record<string, unknown>;
 const MIGRATIONS: Record<number, (input: RawSettings) => RawSettings> = {
-  1: (input) => ({ ...input, version: 2, skinId: 'eye' })
+  1: (input) => ({ ...input, version: 2, skinId: 'eye' }),
+  2: (input) => {
+    const { skinId, ...rest } = input;
+    return {
+      ...rest,
+      version: 3,
+      presets: [{ id: BUILTIN_PRESET_ID, name: 'Ordis', skinId: skinId ?? 'eye' }],
+      activePresetId: BUILTIN_PRESET_ID
+    };
+  }
 };
 
 export function migrate(raw: RawSettings): RawSettings {
@@ -123,7 +144,7 @@ export class SettingsStore {
   }
 
   update(patch: Partial<Settings>): Settings {
-    const merged = { ...this.value, ...patch, version: 2 as const };
+    const merged = { ...this.value, ...patch, version: 3 as const };
     const parsed = settingsSchema.safeParse(merged);
     if (!parsed.success) {
       log.warn(`rejected settings update: ${parsed.error.issues.map((i) => i.message).join('; ')}`);

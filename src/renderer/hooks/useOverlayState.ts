@@ -34,3 +34,29 @@ export function useCueSources(): CueSources | undefined {
 
   return cues;
 }
+
+/** The active preset's display name, e.g. 'Ordis' or a user's rename. */
+export function usePresetName(): string | undefined {
+  const [presetName, setPresetName] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const api = window.codex;
+    if (!api) return;
+    return api.onStateUpdate((payload) => setPresetName(payload.presetName));
+  }, []);
+
+  return presetName;
+}
+
+/** Set when the active preset has a custom appearance GIF, replacing the skin entirely. */
+export function useAppearanceGifUrl(): string | null | undefined {
+  const [gifUrl, setGifUrl] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const api = window.codex;
+    if (!api) return;
+    return api.onStateUpdate((payload) => setGifUrl(payload.appearanceGifUrl));
+  }, []);
+
+  return gifUrl;
+}

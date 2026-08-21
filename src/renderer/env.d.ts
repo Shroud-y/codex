@@ -1,6 +1,14 @@
 /// <reference types="vite/client" />
 
-import type { DebugSnapshot, Settings, SpeechShowPayload, StatePayload } from '@shared/types';
+import type {
+  DebugSnapshot,
+  PresetAssetKind,
+  PresetAssetResult,
+  PresetAssetStatus,
+  Settings,
+  SpeechShowPayload,
+  StatePayload
+} from '@shared/types';
 
 /**
  * Structural mirrors of the two preload surfaces. Declared rather than
@@ -23,6 +31,10 @@ export interface CodexPanelApi {
   getDebugSnapshot(): Promise<DebugSnapshot>;
   onDebugSnapshot(handler: (snapshot: DebugSnapshot) => void): () => void;
   fireEvent(type: string): void;
+  pickPresetAsset(presetId: string, kind: PresetAssetKind): Promise<PresetAssetResult>;
+  clearPresetAsset(presetId: string, kind: PresetAssetKind): Promise<PresetAssetResult>;
+  getPresetAssetStatus(presetId: string): Promise<PresetAssetStatus>;
+  deletePreset(presetId: string): Promise<PresetAssetResult>;
 }
 
 declare global {

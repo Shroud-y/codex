@@ -204,3 +204,33 @@ export function loadPhraseBank(filePath: string): PhraseBankIndex {
 
   return new PhraseBankIndex(parsePhraseBank(raw, filePath));
 }
+
+/**
+ * A preset's phrase bank override only has to redefine the groups it wants
+ * to change — every other group falls through to the default bank, so a
+ * user editing one line of dialogue does not have to recreate the whole
+ * bank. The override is validated with the same schema and duplicate-id
+ * rules as the shipped bank, scoped to the override file alone.
+ */
+export function loadPresetBank(defaultBank: PhraseBank, overridePath: string): PhraseBankIndex {
+  let text: string;
+  try {
+    text = readFileSync(overridePath, 'utf8');
+  } catch (err) {
+    throw new PhraseBankError(`Cannot read preset bank at ${overridePath}: ${(err as Error).message}`);
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch (err) {
+    throw new PhraseBankError(`Preset bank at ${overridePath} is not valid JSON: ${(err as Error).message}`);
+  }
+
+  const override = parsePhraseBank(raw, overridePath);
+  const merged = new Map<string, PhraseGroup>();
+  for (const group of defaultBank.groups) merged.set(group.id, group);
+  for (const group of override.groups) merged.set(group.id, group);
+
+  return new PhraseBankIndex({ version: 1, groups: [...merged.values()] });
+}

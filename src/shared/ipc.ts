@@ -20,7 +20,13 @@ export const IPC = {
   // main ↔ settings window
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
-  settingsUpdated: 'settings:updated'
+  settingsUpdated: 'settings:updated',
+
+  // main ↔ settings window: preset asset management
+  presetsPickAsset: 'presets:pickAsset',
+  presetsClearAsset: 'presets:clearAsset',
+  presetsAssetStatus: 'presets:assetStatus',
+  presetsDelete: 'presets:delete'
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

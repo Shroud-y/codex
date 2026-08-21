@@ -51,7 +51,11 @@ describe('preload channel literals', () => {
         IPC.settingsUpdated,
         IPC.debugSnapshot,
         IPC.debugRequestSnapshot,
-        IPC.debugFireEvent
+        IPC.debugFireEvent,
+        IPC.presetsPickAsset,
+        IPC.presetsClearAsset,
+        IPC.presetsAssetStatus,
+        IPC.presetsDelete
       ])
     );
   });

@@ -2,12 +2,18 @@ import type { CSSProperties } from 'react';
 import type { SkinId, SpeechMode } from '@shared/types';
 import type { Persona } from '@renderer/personas';
 import { getSkin } from '@renderer/skins';
+import GifAppearance from './GifAppearance';
 import styles from './CharacterUnit.module.css';
 
 export interface CharacterUnitProps {
   persona: Persona;
   /** Overrides the persona's default. Comes from settings at runtime. */
   skinId?: SkinId;
+  /**
+   * A preset's custom appearance GIF. When set, it replaces the shader skin
+   * entirely for this unit — nothing else about the layout changes.
+   */
+  gifUrl?: string | null;
   /** `null` when idle — nothing is being said. */
   mode: SpeechMode | null;
   speaking: boolean;
@@ -28,13 +34,13 @@ export interface CharacterUnitProps {
 export default function CharacterUnit({
   persona,
   skinId,
+  gifUrl,
   mode,
   speaking,
   reducedMotion,
   unlit = false
 }: CharacterUnitProps): JSX.Element {
   const skin = getSkin(skinId ?? persona.defaultSkin);
-  const Skin = skin.component;
 
   const bob = skin.motion.idle.find((spec) => spec.target === 'unit' && spec.kind === 'bob');
   const palette = skin.paletteOverrides
@@ -48,11 +54,13 @@ export default function CharacterUnit({
     '--bob-ms': `${bob?.periodMs ?? 5000}ms`
   } as CSSProperties;
 
+  const Skin = skin.component;
+
   return (
     <div
       className={styles.unit}
       style={style}
-      data-skin={skin.id}
+      data-skin={gifUrl ? 'gif' : skin.id}
       data-mode={mode ?? 'normal'}
       data-speaking={speaking ? 'true' : 'false'}
       data-unlit={unlit ? 'true' : 'false'}
@@ -60,7 +68,11 @@ export default function CharacterUnit({
       data-bob={bob ? 'true' : 'false'}
       aria-hidden="true"
     >
-      <Skin palette={palette} mode={mode ?? 'normal'} speaking={speaking} reducedMotion={reducedMotion} unlit={unlit} />
+      {gifUrl ? (
+        <GifAppearance src={gifUrl} canvas={skin.canvas} />
+      ) : (
+        <Skin palette={palette} mode={mode ?? 'normal'} speaking={speaking} reducedMotion={reducedMotion} unlit={unlit} />
+      )}
     </div>
   );
 }

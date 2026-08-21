@@ -1,11 +1,30 @@
 import { app, dialog, globalShortcut, ipcMain, net, protocol } from 'electron';
 import { pathToFileURL } from 'node:url';
-import { mkdirSync } from 'node:fs';
+import {
+  mkdirSync,
+  existsSync,
+  statSync,
+  copyFileSync,
+  renameSync,
+  rmSync,
+  readFileSync,
+  unlinkSync
+} from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 
 import { IPC } from '@shared/ipc';
-import type { DebugSnapshot, FrequencyProfile, Settings } from '@shared/types';
+import {
+  BUILTIN_PRESET_ID,
+  type CueSources,
+  type DebugSnapshot,
+  type FrequencyProfile,
+  type Preset,
+  type PresetAssetKind,
+  type PresetAssetResult,
+  type PresetAssetStatus,
+  type Settings
+} from '@shared/types';
 
 import { EventBus } from './core/eventBus';
 import {
@@ -22,7 +41,13 @@ import {
   FREQUENCY_MULTIPLIER
 } from './core/cooldown';
 import { RecentHistory } from './core/selector';
-import { PhraseBankError, loadPhraseBank, type PhraseBankIndex } from './core/phraseBank';
+import {
+  PhraseBankError,
+  loadPhraseBank,
+  loadPresetBank,
+  parsePhraseBank,
+  type PhraseBankIndex
+} from './core/phraseBank';
 import { TriggerEngine } from './core/triggerEngine';
 import { SpeechDirector } from './core/speechDirector';
 import { RuntimeState, type SnoozeChoice } from './core/runtimeState';
@@ -51,7 +76,7 @@ import { StateStore } from './settings/stateStore';
 import { configureLogger, createLogger } from './log/logger';
 import { NullVoiceEngine } from './voice/NullVoiceEngine';
 import { AUDIO_SCHEME, PrerenderedVoiceEngine, audioDirHasFiles } from './voice/PrerenderedVoiceEngine';
-import { resolveCueSources } from './voice/cueAudio';
+import { CUE_EXTENSIONS, resolveCueSources, resolvePresetCueSources, type CueId } from './voice/cueAudio';
 import type { VoiceEngine } from './voice/VoiceEngine';
 import { paths } from './paths';
 
@@ -62,15 +87,23 @@ const UNPROMPTED_GROUP = 'ambient.unprompted';
 /** Phase 2's command palette gets a home now so it costs nothing later (§19). */
 const COMMAND_PALETTE_ACCELERATOR = 'CommandOrControl+Alt+Shift+C';
 
+/** Custom scheme a preset's appearance GIF loads through, same reasoning as `AUDIO_SCHEME`. */
+const ASSET_SCHEME = 'codex-asset';
+
+/** A user-supplied GIF this large would cost real overlay-renderer memory (§ electron-measurement-traps). */
+const MAX_GIF_BYTES = 8 * 1024 * 1024;
+
 // A Web Audio context in a page that never receives a click stays suspended
 // under Chromium's default autoplay policy, and the overlay is click-through:
 // it can never get that gesture. Without this the appear/disappear cues are
 // silent in a packaged build while working fine in the design harness.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
-// Must run before `app.whenReady` — the overlay loads audio through this scheme.
+// Must run before `app.whenReady` — the overlay loads audio and preset assets
+// through these schemes.
 protocol.registerSchemesAsPrivileged([
-  { scheme: AUDIO_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
+  { scheme: AUDIO_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+  { scheme: ASSET_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
 ]);
 
 if (!app.requestSingleInstanceLock()) {
@@ -88,10 +121,12 @@ async function bootstrap(): Promise<void> {
   /* ---------------------------------------------------------------- */
   /* Phrase bank — a schema violation is a fatal startup error (§6).   */
   /* ---------------------------------------------------------------- */
-  let bank: PhraseBankIndex;
+  let defaultBank: PhraseBankIndex;
   try {
-    bank = loadPhraseBank(paths.phraseBank());
-    log.info(`phrase bank loaded: ${bank.phraseCount} phrases in ${bank.groupIds().length} groups`);
+    defaultBank = loadPhraseBank(paths.phraseBank());
+    log.info(
+      `phrase bank loaded: ${defaultBank.phraseCount} phrases in ${defaultBank.groupIds().length} groups`
+    );
   } catch (err) {
     const message = err instanceof PhraseBankError ? err.message : String(err);
     log.error(message);
@@ -123,21 +158,22 @@ async function bootstrap(): Promise<void> {
   const overlay = new OverlayWindow();
   overlay.create(OverlayWindow.preloadPath());
   overlay.setOffsets(settingsStore.current.overlay);
-  overlay.setSkin(settingsStore.current.skinId);
 
   // Files win over the synthesised cues, checked once here — same bargain as
-  // the voice engine, and the same restart to pick a new one up.
-  const cues = resolveCueSources(paths.cueDir());
-  overlay.setCues(cues);
+  // the voice engine, and the same restart to pick a new shipped one up. A
+  // preset's own cue files (checked per-preset in `resolveActivePreset`) win
+  // over these in turn.
+  const defaultCues = resolveCueSources(paths.cueDir());
   log.info(
-    `overlay cues: appear ${cues.appear ? 'file' : 'synthesised'}, ` +
-      `disappear ${cues.disappear ? 'file' : 'synthesised'}`
+    `default cues: appear ${defaultCues.appear ? 'file' : 'synthesised'}, ` +
+      `disappear ${defaultCues.disappear ? 'file' : 'synthesised'}`
   );
 
   const probe = new PresenceProbe(paths.probeDir());
   probe.start();
 
   registerAudioProtocol();
+  registerAssetProtocol();
 
   const getSuppression = (now: number): SuppressionState =>
     evaluateSuppression({
@@ -179,7 +215,7 @@ async function bootstrap(): Promise<void> {
   log.info(`voice engine: ${voice.available ? 'prerendered audio' : 'text only'}`);
 
   const director = new SpeechDirector({
-    bank,
+    bank: defaultBank,
     ledger,
     history,
     voice,
@@ -199,7 +235,7 @@ async function bootstrap(): Promise<void> {
   /* Event pipeline                                                    */
   /* ---------------------------------------------------------------- */
   const bus = new EventBus();
-  const triggers = new TriggerEngine(bank);
+  const triggers = new TriggerEngine(defaultBank);
 
   const dangling = triggers.danglingRules();
   if (dangling.length > 0) {
@@ -209,6 +245,11 @@ async function bootstrap(): Promise<void> {
         .join(', ')}`
     );
   }
+
+  // Now that the director and trigger engine exist, resolve and apply the
+  // preset settings actually named at startup — this is what pushes the
+  // real bank/cues/skin/name/gif to the overlay for the first time.
+  applyPreset(settingsStore.current.activePresetId);
 
   bus.on('*', (event: AppEvent) => {
     const now = Date.now();
@@ -319,7 +360,7 @@ async function bootstrap(): Promise<void> {
 
   settingsStore.onChange((settings) => {
     overlay.setOffsets(settings.overlay);
-    overlay.setSkin(settings.skinId);
+    applyPreset(settings.activePresetId);
     void syncMonitors(settings);
     reconcileAutostart(settings.startWithSystem);
     settingsWindow.send(IPC.settingsUpdated, settings);
@@ -355,6 +396,33 @@ async function bootstrap(): Promise<void> {
   ipcMain.handle(IPC.settingsSet, (_event, payload: unknown) => {
     if (!payload || typeof payload !== 'object') return settingsStore.current;
     return settingsStore.update(payload as Partial<Settings>);
+  });
+
+  const presetAssetKindSchema = z.enum(['bank', 'appearSound', 'disappearSound', 'gif']);
+  const presetIdSchema = z.object({ presetId: z.string().min(1) });
+
+  ipcMain.handle(IPC.presetsPickAsset, async (_event, payload: unknown) => {
+    const parsed = z.object({ presetId: z.string().min(1), kind: presetAssetKindSchema }).safeParse(payload);
+    if (!parsed.success) return { ok: false, error: 'invalid request' };
+    return pickPresetAsset(parsed.data.presetId, parsed.data.kind);
+  });
+
+  ipcMain.handle(IPC.presetsClearAsset, (_event, payload: unknown) => {
+    const parsed = z.object({ presetId: z.string().min(1), kind: presetAssetKindSchema }).safeParse(payload);
+    if (!parsed.success) return { ok: false, error: 'invalid request' };
+    return clearPresetAsset(parsed.data.presetId, parsed.data.kind);
+  });
+
+  ipcMain.handle(IPC.presetsAssetStatus, (_event, payload: unknown) => {
+    const parsed = presetIdSchema.safeParse(payload);
+    if (!parsed.success) return { hasBank: false, hasAppear: false, hasDisappear: false, hasGif: false };
+    return assetStatusFor(parsed.data.presetId);
+  });
+
+  ipcMain.handle(IPC.presetsDelete, (_event, payload: unknown) => {
+    const parsed = presetIdSchema.safeParse(payload);
+    if (!parsed.success) return { ok: false, error: 'invalid request' };
+    return deletePresetById(parsed.data.presetId);
   });
 
   ipcMain.handle(IPC.debugRequestSnapshot, () => buildDebugSnapshot());
@@ -410,6 +478,231 @@ async function bootstrap(): Promise<void> {
   });
 
   log.info(`Codex ready (first run: ${firstRun})`);
+
+  /* ---------------------------------------------------------------- */
+  /* Preset resolution and asset management                            */
+  /* ---------------------------------------------------------------- */
+
+  function findPreset(id: string): Preset {
+    return (
+      settingsStore.current.presets.find((p) => p.id === id) ??
+      settingsStore.current.presets.find((p) => p.id === BUILTIN_PRESET_ID) ??
+      settingsStore.current.presets[0]!
+    );
+  }
+
+  /**
+   * Everything the active preset determines, resolved from disk. A missing
+   * override file at any of the three paths falls through to the shipped
+   * default — the same "file present → used" bargain the cue sounds and the
+   * prerendered voice engine already make.
+   */
+  function resolveActivePreset(id: string): {
+    preset: Preset;
+    bank: PhraseBankIndex;
+    cues: CueSources;
+    gifUrl: string | null;
+  } {
+    const preset = findPreset(id);
+
+    const bankOverride = paths.presetBankFile(preset.id);
+    let bank = defaultBank;
+    if (existsSync(bankOverride)) {
+      try {
+        bank = loadPresetBank(defaultBank.bank, bankOverride);
+      } catch (err) {
+        log.error(`preset "${preset.id}" bank override invalid, using default: ${String(err)}`);
+      }
+    }
+
+    const presetCues = resolvePresetCueSources(paths.presetDir(preset.id), preset.id, ASSET_SCHEME);
+    const cues: CueSources = {
+      appear: presetCues.appear ?? defaultCues.appear,
+      disappear: presetCues.disappear ?? defaultCues.disappear
+    };
+
+    const gifFile = paths.presetGifFile(preset.id);
+    const gifUrl = existsSync(gifFile) ? `${ASSET_SCHEME}://gif/${preset.id}` : null;
+
+    return { preset, bank, cues, gifUrl };
+  }
+
+  /** Swaps in whichever preset is now active — startup and every settings change alike. */
+  function applyPreset(id: string): void {
+    const resolved = resolveActivePreset(id);
+    director.setBank(resolved.bank);
+    triggers.setBank(resolved.bank);
+    overlay.setPreset({
+      name: resolved.preset.name,
+      skinId: resolved.preset.skinId,
+      cues: resolved.cues,
+      gifUrl: resolved.gifUrl
+    });
+  }
+
+  /** Removes every `appear.*`/`disappear.*` file in a preset dir, so a new upload never leaves a stale sibling extension for `resolveCueSources` to prefer. */
+  function clearCueFiles(dir: string, cueId: CueId): void {
+    for (const ext of CUE_EXTENSIONS) {
+      const file = join(dir, `${cueId}${ext}`);
+      if (existsSync(file)) unlinkSync(file);
+    }
+  }
+
+  function copyAtomic(source: string, destination: string): void {
+    const tmp = `${destination}.tmp`;
+    copyFileSync(source, tmp);
+    renameSync(tmp, destination);
+  }
+
+  async function pickPresetAsset(
+    presetId: string,
+    kind: PresetAssetKind
+  ): Promise<PresetAssetResult> {
+    if (!settingsStore.current.presets.some((p) => p.id === presetId)) {
+      return { ok: false, error: 'unknown preset' };
+    }
+
+    const filters =
+      kind === 'bank'
+        ? [{ name: 'Phrase bank', extensions: ['json'] }]
+        : kind === 'gif'
+          ? [{ name: 'GIF', extensions: ['gif'] }]
+          : [{ name: 'Audio', extensions: ['ogg', 'wav', 'mp3'] }];
+
+    const parentWindow = settingsWindow.browserWindow;
+    const picked = parentWindow
+      ? await dialog.showOpenDialog(parentWindow, { properties: ['openFile'], filters })
+      : await dialog.showOpenDialog({ properties: ['openFile'], filters });
+    if (picked.canceled || picked.filePaths.length === 0) return { ok: false, error: 'cancelled' };
+    const source = picked.filePaths[0]!;
+    const ext = source.slice(source.lastIndexOf('.')).toLowerCase();
+
+    const dir = paths.presetDir(presetId);
+    try {
+      mkdirSync(dir, { recursive: true });
+
+      if (kind === 'bank') {
+        if (ext !== '.json') return { ok: false, error: 'expected a .json file' };
+        const raw = JSON.parse(readFileSync(source, 'utf8')) as unknown;
+        parsePhraseBank(raw, source);
+        copyAtomic(source, paths.presetBankFile(presetId));
+      } else if (kind === 'gif') {
+        if (ext !== '.gif') return { ok: false, error: 'expected a .gif file' };
+        if (statSync(source).size > MAX_GIF_BYTES) {
+          return { ok: false, error: `GIF is larger than ${MAX_GIF_BYTES / (1024 * 1024)} MB` };
+        }
+        copyAtomic(source, paths.presetGifFile(presetId));
+      } else {
+        if (!(CUE_EXTENSIONS as readonly string[]).includes(ext)) {
+          return { ok: false, error: 'expected a .ogg, .wav or .mp3 file' };
+        }
+        const cueId: CueId = kind === 'appearSound' ? 'appear' : 'disappear';
+        clearCueFiles(dir, cueId);
+        copyAtomic(source, join(dir, `${cueId}${ext}`));
+      }
+    } catch (err) {
+      const message = err instanceof PhraseBankError ? err.message : String((err as Error).message ?? err);
+      return { ok: false, error: message };
+    }
+
+    if (presetId === settingsStore.current.activePresetId) applyPreset(presetId);
+    return { ok: true };
+  }
+
+  function clearPresetAsset(
+    presetId: string,
+    kind: PresetAssetKind
+  ): PresetAssetResult {
+    if (!settingsStore.current.presets.some((p) => p.id === presetId)) {
+      return { ok: false, error: 'unknown preset' };
+    }
+
+    const dir = paths.presetDir(presetId);
+    if (kind === 'bank') {
+      const file = paths.presetBankFile(presetId);
+      if (existsSync(file)) unlinkSync(file);
+    } else if (kind === 'gif') {
+      const file = paths.presetGifFile(presetId);
+      if (existsSync(file)) unlinkSync(file);
+    } else {
+      clearCueFiles(dir, kind === 'appearSound' ? 'appear' : 'disappear');
+    }
+
+    if (presetId === settingsStore.current.activePresetId) applyPreset(presetId);
+    return { ok: true };
+  }
+
+  function assetStatusFor(presetId: string): PresetAssetStatus {
+    const dir = paths.presetDir(presetId);
+    const hasCue = (cueId: CueId): boolean =>
+      CUE_EXTENSIONS.some((ext) => existsSync(join(dir, `${cueId}${ext}`)));
+    return {
+      hasBank: existsSync(paths.presetBankFile(presetId)),
+      hasAppear: hasCue('appear'),
+      hasDisappear: hasCue('disappear'),
+      hasGif: existsSync(paths.presetGifFile(presetId))
+    };
+  }
+
+  function deletePresetById(id: string): PresetAssetResult {
+    if (id === BUILTIN_PRESET_ID) return { ok: false, error: 'cannot delete the built-in preset' };
+    const current = settingsStore.current;
+    if (!current.presets.some((p) => p.id === id)) return { ok: false, error: 'unknown preset' };
+
+    settingsStore.update({
+      presets: current.presets.filter((p) => p.id !== id),
+      activePresetId: current.activePresetId === id ? BUILTIN_PRESET_ID : current.activePresetId
+    });
+
+    try {
+      rmSync(paths.presetDir(id), { recursive: true, force: true });
+    } catch (err) {
+      log.warn(`could not remove assets for deleted preset "${id}": ${String(err)}`);
+    }
+
+    return { ok: true };
+  }
+
+  function registerAssetProtocol(): void {
+    protocol.handle(ASSET_SCHEME, async (request) => {
+      try {
+        const url = new URL(request.url);
+        const knownPreset = (presetId: string): boolean =>
+          settingsStore.current.presets.some((p) => p.id === presetId);
+
+        if (url.host === 'gif') {
+          const presetId = decodeURIComponent(url.pathname.replace(/^\//, ''));
+          if (presetId.includes('/') || presetId.includes('\\') || presetId.includes('..')) {
+            return new Response('forbidden', { status: 403 });
+          }
+          if (!knownPreset(presetId)) return new Response('not found', { status: 404 });
+          return await net.fetch(pathToFileURL(paths.presetGifFile(presetId)).toString());
+        }
+
+        if (url.host === 'cue') {
+          const [presetId, fileName] = decodeURIComponent(url.pathname.replace(/^\//, '')).split('/');
+          if (!presetId || !fileName) return new Response('not found', { status: 404 });
+          // Path traversal guard: the preset id and filename must each be a bare segment.
+          if (
+            presetId.includes('\\') ||
+            presetId.includes('..') ||
+            fileName.includes('/') ||
+            fileName.includes('\\') ||
+            fileName.includes('..')
+          ) {
+            return new Response('forbidden', { status: 403 });
+          }
+          if (!knownPreset(presetId)) return new Response('not found', { status: 404 });
+          return await net.fetch(pathToFileURL(join(paths.presetDir(presetId), fileName)).toString());
+        }
+
+        return new Response('not found', { status: 404 });
+      } catch (err) {
+        log.debug(`asset protocol failed: ${String(err)}`);
+        return new Response('not found', { status: 404 });
+      }
+    });
+  }
 
   /* ---------------------------------------------------------------- */
   /* Helpers that need the closure                                     */

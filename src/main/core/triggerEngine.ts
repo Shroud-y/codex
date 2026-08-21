@@ -205,12 +205,17 @@ export class TriggerEngine {
   private readonly rng: Rng;
   private readonly lastFiredAt = new Map<string, number>();
 
-  constructor(
-    private readonly bank: PhraseBankIndex,
-    options: TriggerEngineOptions = {}
-  ) {
+  private bank: PhraseBankIndex;
+
+  constructor(bank: PhraseBankIndex, options: TriggerEngineOptions = {}) {
+    this.bank = bank;
     this.rules = options.rules ?? TRIGGER_RULES;
     this.rng = options.rng ?? Math.random;
+  }
+
+  /** Swaps the active bank when the active preset changes, no restart needed. */
+  setBank(bank: PhraseBankIndex): void {
+    this.bank = bank;
   }
 
   /** Rules pointing at a group the bank does not define. Checked at startup. */

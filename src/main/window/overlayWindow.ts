@@ -25,7 +25,9 @@ export class OverlayWindow implements OverlayPresenter {
   private pending: SpeechShowPayload | null = null;
   private skinId: SkinId = 'eye';
   private cues: CueSources = { appear: null, disappear: null };
-  private runtimeState: Omit<StatePayload, 'skinId' | 'cues'> = {
+  private presetName = 'Ordis';
+  private appearanceGifUrl: string | null = null;
+  private runtimeState: Omit<StatePayload, 'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl'> = {
     muted: false,
     snoozedUntil: null
   };
@@ -123,27 +125,35 @@ export class OverlayWindow implements OverlayPresenter {
   }
 
   /**
-   * The skin is a settings value, not a runtime one, so it is merged in here
-   * rather than threaded through `RuntimeState` — the renderer only ever needs
-   * to read it off one payload.
+   * Everything the active preset determines: its skin (settings values, not
+   * runtime ones, so merged in here rather than threaded through
+   * `RuntimeState`), its cue sounds and its display name, plus a custom
+   * appearance GIF if it has one — which replaces the skin entirely.
+   * Resolved by main whenever the active preset changes (or on startup) and
+   * pushed together, so the renderer never has to reconcile a partial update.
    */
-  setSkin(skinId: SkinId): void {
-    if (skinId === this.skinId) return;
-    this.skinId = skinId;
+  setPreset(preset: {
+    name: string;
+    skinId: SkinId;
+    cues: CueSources;
+    gifUrl: string | null;
+  }): void {
+    const unchanged =
+      preset.name === this.presetName &&
+      preset.skinId === this.skinId &&
+      preset.gifUrl === this.appearanceGifUrl &&
+      preset.cues.appear === this.cues.appear &&
+      preset.cues.disappear === this.cues.disappear;
+    if (unchanged) return;
+
+    this.presetName = preset.name;
+    this.skinId = preset.skinId;
+    this.cues = preset.cues;
+    this.appearanceGifUrl = preset.gifUrl;
     this.pushState();
   }
 
-  /**
-   * Which files, if any, the overlay should play instead of the cues it
-   * synthesises. Resolved once at startup and pushed with the rest of the
-   * state, so the renderer never has to probe for them.
-   */
-  setCues(cues: CueSources): void {
-    this.cues = cues;
-    this.pushState();
-  }
-
-  sendState(state: Omit<StatePayload, 'skinId' | 'cues'>): void {
+  sendState(state: Omit<StatePayload, 'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl'>): void {
     this.runtimeState = state;
     this.pushState();
   }
@@ -152,7 +162,9 @@ export class OverlayWindow implements OverlayPresenter {
     this.browserWindow?.webContents.send(IPC.stateUpdate, {
       ...this.runtimeState,
       skinId: this.skinId,
-      cues: this.cues
+      cues: this.cues,
+      presetName: this.presetName,
+      appearanceGifUrl: this.appearanceGifUrl
     } satisfies StatePayload);
   }
 

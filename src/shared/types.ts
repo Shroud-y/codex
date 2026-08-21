@@ -70,6 +70,10 @@ export interface StatePayload {
   /** Switchable at runtime from settings; no restart. */
   skinId: SkinId;
   cues: CueSources;
+  /** The active preset's display name, e.g. 'Ordis' or a user's rename. */
+  presetName: string;
+  /** Set when the active preset has a custom appearance GIF, which replaces the skin entirely. */
+  appearanceGifUrl: string | null;
 }
 
 /** renderer → main: 'speech:finished' / 'speech:dismissed' */
@@ -93,11 +97,41 @@ export interface OverlaySettings {
   offsetY: number;
 }
 
-export interface Settings {
-  version: 2;
-  startWithSystem: boolean;
-  /** Overrides the persona's default skin. */
+/**
+ * A switchable character profile. `'codex'` is the built-in Ordis preset —
+ * renamable but not deletable. Custom phrase bank, cue sounds and appearance
+ * GIF are not stored here: their presence on disk under
+ * `userData/presets/<id>/` is what decides whether they override the
+ * defaults, the same bargain `resolveCueSources` already makes for the
+ * shipped cue sounds.
+ */
+export interface Preset {
+  id: string;
+  name: string;
+  /** Fallback shader skin, used only when the preset has no appearance GIF. */
   skinId: SkinId;
+}
+
+export const BUILTIN_PRESET_ID = 'codex';
+
+/** Which of a preset's overridable assets an operation targets. */
+export type PresetAssetKind = 'bank' | 'appearSound' | 'disappearSound' | 'gif';
+
+export type PresetAssetResult = { ok: true } | { ok: false; error: string };
+
+/** Default-vs-custom status per asset, for the Settings panel to render. */
+export interface PresetAssetStatus {
+  hasBank: boolean;
+  hasAppear: boolean;
+  hasDisappear: boolean;
+  hasGif: boolean;
+}
+
+export interface Settings {
+  version: 3;
+  startWithSystem: boolean;
+  presets: Preset[];
+  activePresetId: string;
   frequencyProfile: FrequencyProfile;
   quietHours: QuietHours;
   suppressOnFullscreen: boolean;

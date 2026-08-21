@@ -17,5 +17,10 @@ export const paths = {
   probeDir: (): string => join(resourceRoot(), 'probe'),
   settingsFile: (): string => join(app.getPath('userData'), 'settings.json'),
   stateFile: (): string => join(app.getPath('userData'), 'state.json'),
-  logDir: (): string => join(app.getPath('userData'), 'logs')
+  logDir: (): string => join(app.getPath('userData'), 'logs'),
+
+  presetsRoot: (): string => join(app.getPath('userData'), 'presets'),
+  presetDir: (id: string): string => join(paths.presetsRoot(), id),
+  presetBankFile: (id: string): string => join(paths.presetDir(id), 'bank.json'),
+  presetGifFile: (id: string): string => join(paths.presetDir(id), 'appearance.gif')
 };

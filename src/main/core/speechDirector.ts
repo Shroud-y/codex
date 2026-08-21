@@ -128,6 +128,11 @@ export class SpeechDirector {
     return this.current !== null;
   }
 
+  /** Swaps the active bank when the active preset changes, no restart needed. */
+  setBank(bank: PhraseBankIndex): void {
+    this.deps.bank = bank;
+  }
+
   deferredSnapshot(): { speechId: string; expiresAt: number }[] {
     return this.deferred.map((item) => ({
       speechId: `${item.request.origin}:${item.request.groupId}`,

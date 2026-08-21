@@ -11,6 +11,10 @@ export interface CompanionProps {
   persona: Persona;
   /** Overrides the persona's default skin; supplied by settings. */
   skinId?: SkinId;
+  /** Overrides the persona's static name label with the active preset's, from runtime state. */
+  displayName?: string;
+  /** A preset's custom appearance GIF; replaces the shader skin entirely when set. */
+  gifUrl?: string | null;
   segments: PhraseSegment[];
   activeIndex: number;
   revealed: number;
@@ -40,6 +44,8 @@ export interface CompanionProps {
 export default function Companion({
   persona,
   skinId,
+  displayName,
+  gifUrl,
   segments,
   activeIndex,
   revealed,
@@ -78,6 +84,7 @@ export default function Companion({
             <CharacterUnit
               persona={persona}
               skinId={skinId}
+              gifUrl={gifUrl}
               mode={mode}
               speaking={visible && typing}
               reducedMotion={reducedMotion}
@@ -88,7 +95,7 @@ export default function Companion({
           {/* Zone B — under the unit. The label is the fixed point and the
               dialogue hangs beneath it (§1.1). */}
           <div className={styles.speechZone}>
-            <div className={styles.nameLabel}>{persona.nameLabel}</div>
+            <div className={styles.nameLabel}>{displayName ?? persona.nameLabel}</div>
             <div className={styles.dialogueSlot}>
               <Dialogue
                 key={speechKey}

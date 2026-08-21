@@ -1,7 +1,9 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { PhraseBankError, PhraseBankIndex, parsePhraseBank } from '@main/core/phraseBank';
+import { afterEach, describe, expect, it } from 'vitest';
+import { PhraseBankError, PhraseBankIndex, loadPresetBank, parsePhraseBank } from '@main/core/phraseBank';
 import { TRIGGER_RULES, TriggerEngine } from '@main/core/triggerEngine';
 import { DEFAULT_COOLDOWNS } from '@main/core/cooldown';
 
@@ -127,5 +129,57 @@ describe('the shipped bank', () => {
     const engine = new TriggerEngine(index);
     expect(engine.danglingRules()).toEqual([]);
     expect(TRIGGER_RULES.length).toBeGreaterThan(0);
+  });
+});
+
+describe('loadPresetBank', () => {
+  let dir: string | null = null;
+
+  afterEach(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+    dir = null;
+  });
+
+  function overrideFile(groups: unknown[]): string {
+    dir = mkdtempSync(join(tmpdir(), 'codex-preset-bank-'));
+    const file = join(dir, 'bank.json');
+    writeFileSync(file, JSON.stringify(bank(groups)));
+    return file;
+  }
+
+  const defaultBank = parsePhraseBank(
+    bank([
+      { id: 'g1', category: 'ambient', phrases: [validPhrase] },
+      { id: 'g2', category: 'ambient', phrases: [{ ...validPhrase, id: 'a.two' }] }
+    ])
+  );
+
+  it('replaces a group by id and leaves the rest of the default bank alone', () => {
+    const override = overrideFile([
+      { id: 'g1', category: 'ambient', phrases: [{ id: 'a.custom', segments: [{ text: 'Custom.', mode: 'normal' }] }] }
+    ]);
+    const index = loadPresetBank(defaultBank, override);
+    expect(index.group('g1')?.phrases[0]?.id).toBe('a.custom');
+    expect(index.group('g2')?.phrases[0]?.id).toBe('a.two');
+  });
+
+  it('adds a group the default bank never had', () => {
+    const override = overrideFile([
+      { id: 'g3', category: 'ambient', phrases: [{ id: 'a.three', segments: [{ text: 'New.', mode: 'normal' }] }] }
+    ]);
+    const index = loadPresetBank(defaultBank, override);
+    expect(index.group('g1')).toBeDefined();
+    expect(index.group('g3')?.phrases[0]?.id).toBe('a.three');
+  });
+
+  it('rejects an invalid override with the same schema as the shipped bank', () => {
+    const override = overrideFile([{ id: 'g1', category: 'ambient', phrases: [] }]);
+    expect(() => loadPresetBank(defaultBank, override)).toThrow(PhraseBankError);
+  });
+
+  it('throws when the override file does not exist', () => {
+    expect(() => loadPresetBank(defaultBank, join(tmpdir(), 'codex-preset-bank-missing.json'))).toThrow(
+      PhraseBankError
+    );
   });
 });
