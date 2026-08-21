@@ -97,7 +97,7 @@ You're not stuck with just standart presets. Open the tray icon **Settings…** 
 - Each preset lets you drop in your own files, no code or restart needed:
   - **Phrase bank (.json)** - your own lines. Easiest way to start is copying
     [`resources/phrases/bank.json`](resources/phrases/bank.json) and editing
-    the text — you only need to include the groups you actually want to
+    the text, you only need to include the groups you actually want to
     change.
   - **Appear / disappear sound** - swap the little cue sounds it makes when it
     shows up or leaves.
