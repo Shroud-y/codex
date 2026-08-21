@@ -18,7 +18,7 @@ hours, fullscreen games, and while you're on a call, it won't interrupt.
 <summary>Watched programs by default</summary>
 
 SHARD only reacts to processes on this list (add or remove your own anytime
-from **Settings… → Watched processes**):
+from **Settings… - Watched processes**):
 
 ```
 Code.exe
@@ -89,20 +89,20 @@ pnpm dev
 
 ## Customizing the character
 
-You're not stuck with just standart presets. Open the tray icon → **Settings…** → **Presets**.
+You're not stuck with just standart presets. Open the tray icon **Settings…** - **Presets**.
 
-- **Add a new preset** with the button at the bottom — gives you a fresh
+- **Add a new preset** with the button at the bottom - gives you a fresh
   character you can rename and switch to anytime (the radio button next to it
   picks which one is currently active).
 - Each preset lets you drop in your own files, no code or restart needed:
-  - **Phrase bank (.json)** — your own lines. Easiest way to start is copying
+  - **Phrase bank (.json)** - your own lines. Easiest way to start is copying
     [`resources/phrases/bank.json`](resources/phrases/bank.json) and editing
     the text — you only need to include the groups you actually want to
     change.
-  - **Appear / disappear sound** — swap the little cue sounds it makes when it
+  - **Appear / disappear sound** - swap the little cue sounds it makes when it
     shows up or leaves.
-  - **Appearance video (.webm/.mp4)** — replace how it looks. Use a video, not
-    a GIF — GIFs actually stutter here since the browser engine has to decode
+  - **Appearance video (.webm/.mp4)** - replace how it looks. Use a video, not
+    a GIF - GIFs actually stutter here since the browser engine has to decode
     them frame by frame instead of just playing them.
 - Hit **Reset to default** on any of those to go back to stock.
 
