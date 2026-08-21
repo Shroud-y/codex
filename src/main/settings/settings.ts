@@ -14,7 +14,7 @@ const presetSchema = z.object({
 });
 
 const settingsSchema = z.object({
-  version: z.literal(3),
+  version: z.literal(4),
   startWithSystem: z.boolean(),
   presets: z.array(presetSchema).min(1),
   activePresetId: z.string().min(1),
@@ -28,7 +28,10 @@ const settingsSchema = z.object({
   overlay: z.object({
     scale: z.number().min(0.5).max(2),
     offsetX: z.number(),
-    offsetY: z.number()
+    offsetY: z.number(),
+    cueVolume: z.number().min(0).max(1),
+    appearSoundEnabled: z.boolean(),
+    disappearSoundEnabled: z.boolean()
   })
 });
 
@@ -72,7 +75,7 @@ export const DEFAULT_WATCHED_PROCESSES = [
 
 export function defaultSettings(downloadsDir: string): Settings {
   return {
-    version: 3,
+    version: 4,
     startWithSystem: true,
     presets: [{ id: BUILTIN_PRESET_ID, name: 'Ordis', skinId: 'eye' }],
     activePresetId: BUILTIN_PRESET_ID,
@@ -83,7 +86,14 @@ export function defaultSettings(downloadsDir: string): Settings {
     watchedProcesses: [...DEFAULT_WATCHED_PROCESSES],
     watchedFolders: [downloadsDir],
     monitors: Object.fromEntries(MONITOR_IDS.map((id) => [id, true])),
-    overlay: { scale: 1, offsetX: 0, offsetY: 0 }
+    overlay: {
+      scale: 1,
+      offsetX: 0,
+      offsetY: 0,
+      cueVolume: 1,
+      appearSoundEnabled: true,
+      disappearSoundEnabled: true
+    }
   };
 }
 
@@ -98,6 +108,12 @@ export function defaultSettings(downloadsDir: string): Settings {
  * Version 3 moves the single global `skinId` onto a preset — the built-in
  * Ordis one — since appearance is now per-preset. The old value is kept
  * rather than reset to `'eye'`, so an existing user's choice survives.
+ *
+ * Version 4 adds cue volume and per-cue on/off to `overlay`. `read()` merges
+ * an old file shallowly (`{ ...fallback, ...migrated }`), so a `migrated`
+ * that carries an `overlay` object missing these three fields would replace
+ * the fallback's `overlay` wholesale and fail the schema — the migration has
+ * to add them itself rather than leaving it to the merge.
  */
 type RawSettings = Record<string, unknown>;
 const MIGRATIONS: Record<number, (input: RawSettings) => RawSettings> = {
@@ -109,6 +125,19 @@ const MIGRATIONS: Record<number, (input: RawSettings) => RawSettings> = {
       version: 3,
       presets: [{ id: BUILTIN_PRESET_ID, name: 'Ordis', skinId: skinId ?? 'eye' }],
       activePresetId: BUILTIN_PRESET_ID
+    };
+  },
+  3: (input) => {
+    const overlay = (input.overlay ?? {}) as Record<string, unknown>;
+    return {
+      ...input,
+      version: 4,
+      overlay: {
+        ...overlay,
+        cueVolume: overlay.cueVolume ?? 1,
+        appearSoundEnabled: overlay.appearSoundEnabled ?? true,
+        disappearSoundEnabled: overlay.disappearSoundEnabled ?? true
+      }
     };
   }
 };
@@ -144,7 +173,7 @@ export class SettingsStore {
   }
 
   update(patch: Partial<Settings>): Settings {
-    const merged = { ...this.value, ...patch, version: 3 as const };
+    const merged = { ...this.value, ...patch, version: 4 as const };
     const parsed = settingsSchema.safeParse(merged);
     if (!parsed.success) {
       log.warn(`rejected settings update: ${parsed.error.issues.map((i) => i.message).join('; ')}`);

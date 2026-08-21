@@ -3,6 +3,7 @@ import Companion from './components/Companion';
 import { getPersona } from './personas';
 import {
   useAppearanceGifUrl,
+  useAudioOptions,
   useCueSources,
   usePresetName,
   useSkinId
@@ -16,10 +17,11 @@ export default function App(): JSX.Element {
   const cues = useCueSources();
   const presetName = usePresetName();
   const gifUrl = useAppearanceGifUrl();
+  const audioOptions = useAudioOptions();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastInteractive = useRef(false);
 
-  useOverlaySfx(view.visible, cues);
+  useOverlaySfx(view.visible, cues, audioOptions);
 
   /* §10.2 — mouse events still arrive thanks to `forward: true`; report
      whether the cursor is over an interactive element and let main debounce. */

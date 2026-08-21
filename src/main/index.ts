@@ -19,6 +19,7 @@ import {
   type CueSources,
   type DebugSnapshot,
   type FrequencyProfile,
+  type OverlaySettings,
   type Preset,
   type PresetAssetKind,
   type PresetAssetResult,
@@ -158,6 +159,7 @@ async function bootstrap(): Promise<void> {
   const overlay = new OverlayWindow();
   overlay.create(OverlayWindow.preloadPath());
   overlay.setOffsets(settingsStore.current.overlay);
+  overlay.setAudioOptions(audioOptionsFrom(settingsStore.current.overlay));
 
   // Files win over the synthesised cues, checked once here — same bargain as
   // the voice engine, and the same restart to pick a new shipped one up. A
@@ -360,6 +362,7 @@ async function bootstrap(): Promise<void> {
 
   settingsStore.onChange((settings) => {
     overlay.setOffsets(settings.overlay);
+    overlay.setAudioOptions(audioOptionsFrom(settings.overlay));
     applyPreset(settings.activePresetId);
     void syncMonitors(settings);
     reconcileAutostart(settings.startWithSystem);
@@ -748,6 +751,18 @@ async function bootstrap(): Promise<void> {
 function normaliseSnooze(value: number | null): number | null {
   if (value === null) return null;
   return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
+}
+
+function audioOptionsFrom(overlay: OverlaySettings): {
+  volume: number;
+  appearEnabled: boolean;
+  disappearEnabled: boolean;
+} {
+  return {
+    volume: overlay.cueVolume,
+    appearEnabled: overlay.appearSoundEnabled,
+    disappearEnabled: overlay.disappearSoundEnabled
+  };
 }
 
 function safeDownloadsPath(): string {

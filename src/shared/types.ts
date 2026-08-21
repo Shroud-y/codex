@@ -74,6 +74,10 @@ export interface StatePayload {
   presetName: string;
   /** Set when the active preset has a custom appearance GIF, which replaces the skin entirely. */
   appearanceGifUrl: string | null;
+  /** 0 (silent) to 1 (full), from `Settings.overlay.cueVolume`. */
+  cueVolume: number;
+  appearSoundEnabled: boolean;
+  disappearSoundEnabled: boolean;
 }
 
 /** renderer → main: 'speech:finished' / 'speech:dismissed' */
@@ -95,6 +99,10 @@ export interface OverlaySettings {
   scale: number;
   offsetX: number;
   offsetY: number;
+  /** 0 (silent) to 1 (full). Applies to both a file cue and the synthesised fallback. */
+  cueVolume: number;
+  appearSoundEnabled: boolean;
+  disappearSoundEnabled: boolean;
 }
 
 /**
@@ -128,7 +136,7 @@ export interface PresetAssetStatus {
 }
 
 export interface Settings {
-  version: 3;
+  version: 4;
   startWithSystem: boolean;
   presets: Preset[];
   activePresetId: string;

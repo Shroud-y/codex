@@ -27,7 +27,13 @@ export class OverlayWindow implements OverlayPresenter {
   private cues: CueSources = { appear: null, disappear: null };
   private presetName = 'Ordis';
   private appearanceGifUrl: string | null = null;
-  private runtimeState: Omit<StatePayload, 'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl'> = {
+  private cueVolume = 0.8;
+  private appearSoundEnabled = true;
+  private disappearSoundEnabled = true;
+  private runtimeState: Omit<
+    StatePayload,
+    'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl' | 'cueVolume' | 'appearSoundEnabled' | 'disappearSoundEnabled'
+  > = {
     muted: false,
     snoozedUntil: null
   };
@@ -153,7 +159,34 @@ export class OverlayWindow implements OverlayPresenter {
     this.pushState();
   }
 
-  sendState(state: Omit<StatePayload, 'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl'>): void {
+  /**
+   * The user's cue volume and per-cue on/off, from `Settings.overlay`. Global
+   * rather than per-preset, so it lives alongside the skin/cue push instead
+   * of riding on `setPreset` — a preset switch must not reset it.
+   */
+  setAudioOptions(options: {
+    volume: number;
+    appearEnabled: boolean;
+    disappearEnabled: boolean;
+  }): void {
+    const unchanged =
+      options.volume === this.cueVolume &&
+      options.appearEnabled === this.appearSoundEnabled &&
+      options.disappearEnabled === this.disappearSoundEnabled;
+    if (unchanged) return;
+
+    this.cueVolume = options.volume;
+    this.appearSoundEnabled = options.appearEnabled;
+    this.disappearSoundEnabled = options.disappearEnabled;
+    this.pushState();
+  }
+
+  sendState(
+    state: Omit<
+      StatePayload,
+      'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl' | 'cueVolume' | 'appearSoundEnabled' | 'disappearSoundEnabled'
+    >
+  ): void {
     this.runtimeState = state;
     this.pushState();
   }
@@ -164,7 +197,10 @@ export class OverlayWindow implements OverlayPresenter {
       skinId: this.skinId,
       cues: this.cues,
       presetName: this.presetName,
-      appearanceGifUrl: this.appearanceGifUrl
+      appearanceGifUrl: this.appearanceGifUrl,
+      cueVolume: this.cueVolume,
+      appearSoundEnabled: this.appearSoundEnabled,
+      disappearSoundEnabled: this.disappearSoundEnabled
     } satisfies StatePayload);
   }
 

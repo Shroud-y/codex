@@ -60,3 +60,28 @@ export function useAppearanceGifUrl(): string | null | undefined {
 
   return gifUrl;
 }
+
+export interface AudioOptions {
+  volume: number;
+  appearEnabled: boolean;
+  disappearEnabled: boolean;
+}
+
+/** The user's cue volume and per-cue on/off — global, not per-preset. */
+export function useAudioOptions(): AudioOptions | undefined {
+  const [options, setOptions] = useState<AudioOptions | undefined>(undefined);
+
+  useEffect(() => {
+    const api = window.codex;
+    if (!api) return;
+    return api.onStateUpdate((payload) =>
+      setOptions({
+        volume: payload.cueVolume,
+        appearEnabled: payload.appearSoundEnabled,
+        disappearEnabled: payload.disappearSoundEnabled
+      })
+    );
+  }, []);
+
+  return options;
+}

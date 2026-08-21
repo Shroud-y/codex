@@ -23,6 +23,10 @@ import type { CueSources } from '@shared/types';
 /** Peak of the mixed cue. Deliberately low — this thing speaks all day. */
 const MASTER_GAIN = 0.16;
 
+/** User-set volume (0-1) and per-cue on/off. Applies to both a file cue and the synthesised fallback. */
+let volume = 1;
+let enabled: Record<CueId, boolean> = { appear: true, disappear: true };
+
 /** Floor for exponential ramps, which cannot reach or pass through zero. */
 const SILENCE = 0.0001;
 
@@ -161,7 +165,7 @@ function begin(target: AudioContext): Cue {
   }
 
   const out = target.createGain();
-  out.gain.value = MASTER_GAIN;
+  out.gain.value = MASTER_GAIN * volume;
   out.connect(target.destination);
 
   const cue: Cue = { out, sources: [], pending: 0 };
@@ -400,10 +404,25 @@ function player(id: CueId): HTMLAudioElement | null {
 
   const element = new Audio(url);
   element.preload = 'auto';
+  element.volume = volume;
   element.addEventListener('playing', () => inFlight.delete(id));
   element.addEventListener('error', () => giveUp(id));
   players.set(id, element);
   return element;
+}
+
+/**
+ * The user's cue volume and per-cue on/off, from settings. Global rather
+ * than per-preset — switching presets must not reset it.
+ */
+export function setAudioOptions(options: {
+  volume: number;
+  appearEnabled: boolean;
+  disappearEnabled: boolean;
+}): void {
+  volume = options.volume;
+  enabled = { appear: options.appearEnabled, disappear: options.disappearEnabled };
+  for (const element of players.values()) element.volume = volume;
 }
 
 /**
@@ -424,6 +443,7 @@ function giveUp(id: CueId): void {
 }
 
 function play(id: CueId): void {
+  if (!enabled[id]) return;
   const element = player(id);
   if (!element) {
     SYNTHESISED[id]();

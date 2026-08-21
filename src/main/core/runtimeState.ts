@@ -1,9 +1,18 @@
 import type { StatePayload } from '@shared/types';
 
 /** Everything `state:update` carries except the preset-level facts (skin,
- *  cue sources, name, appearance GIF), which `OverlayWindow` merges in on the
- *  way out. */
-type RuntimePayload = Omit<StatePayload, 'skinId' | 'cues' | 'presetName' | 'appearanceGifUrl'>;
+ *  cue sources, name, appearance GIF) and the audio settings (volume,
+ *  per-cue on/off), which `OverlayWindow` merges in on the way out. */
+type RuntimePayload = Omit<
+  StatePayload,
+  | 'skinId'
+  | 'cues'
+  | 'presetName'
+  | 'appearanceGifUrl'
+  | 'cueVolume'
+  | 'appearSoundEnabled'
+  | 'disappearSoundEnabled'
+>;
 
 export type SnoozeChoice = '30m' | '2h' | 'restart' | 'off';
 

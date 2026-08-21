@@ -168,6 +168,44 @@ function SettingsPanel(): JSX.Element {
             />
           </label>
         </div>
+        <div className="row">
+          <label>
+            Cue volume
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.overlay.cueVolume}
+              onChange={(event) =>
+                patch({ overlay: { ...settings.overlay, cueVolume: Number(event.target.value) } })
+              }
+            />
+          </label>
+          <span className="muted">{Math.round(settings.overlay.cueVolume * 100)}%</span>
+        </div>
+        <div className="row">
+          <label>
+            <input
+              type="checkbox"
+              checked={settings.overlay.appearSoundEnabled}
+              onChange={(event) =>
+                patch({ overlay: { ...settings.overlay, appearSoundEnabled: event.target.checked } })
+              }
+            />
+            Appear sound
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={settings.overlay.disappearSoundEnabled}
+              onChange={(event) =>
+                patch({ overlay: { ...settings.overlay, disappearSoundEnabled: event.target.checked } })
+              }
+            />
+            Disappear sound
+          </label>
+        </div>
       </section>
 
       <h2>Monitors</h2>
