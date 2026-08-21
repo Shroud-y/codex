@@ -3,23 +3,22 @@
 # SHARD
 
 This is my hobby project. I got inspired by Ordis from Warframe and wanted
-something like him living on my own PC — a little companion that sits in the
+something like him living on my own PC, a little companion that sits in the
 tray, notices what's going on with your machine, and pops up now and then to
-say something about it. Nothing serious, just wanted my desktop to feel a bit
-more alive.
+say something about it. Nothing serious.
 
 ![Speaking over the desktop](resources/screenshots/overlay.gif)
 
 It reacts to stuff like games/apps opening and closing, your PC running hot or
 low on space, locking/unlocking, waking up from sleep, the time of day, a
-download finishing — that kind of thing. It also knows when to shut up: quiet
+download finishing, etc. It also knows when to shut up: quiet
 hours, fullscreen games, and while you're on a call, it won't interrupt.
 
 ## Download
 
-Grab the latest build from the [Releases page](https://github.com/Shroud-y/codex/releases) —
+Grab the latest build from the [Releases page](https://github.com/Shroud-y/codex/releases), 
 download the setup `.exe` and run it. It installs, starts with Windows, and
-lives in your tray from then on. Closing its windows doesn't quit it — right-click
+lives in your tray from then on. Closing its windows doesn't quit it,  right-click
 the tray icon and hit **Quit** if you actually want it gone.
 
 ## Build it yourself
@@ -43,7 +42,7 @@ pnpm dev
 
 ## Customizing the character
 
-You're not stuck with Ordis. Open the tray icon → **Settings…** → **Presets**.
+You're not stuck with just standart presets. Open the tray icon → **Settings…** → **Presets**.
 
 - **Add a new preset** with the button at the bottom — gives you a fresh
   character you can rename and switch to anytime (the radio button next to it
@@ -62,9 +61,3 @@ You're not stuck with Ordis. Open the tray icon → **Settings…** → **Preset
 
 Presets you build live under `%APPDATA%\codex\presets\<presetId>\`, so they
 survive updates and reinstalls.
-
----
-
-Poking around the code and want the deeper technical write-up (architecture,
-Windows-specific plumbing, measured performance)? That's in
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
