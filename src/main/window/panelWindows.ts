@@ -69,12 +69,12 @@ class PanelWindow {
   }
 }
 
-export const settingsWindow = new PanelWindow('settings', 'Codex — Settings', {
+export const settingsWindow = new PanelWindow('settings', 'SHARD — Settings', {
   width: 620,
   height: 720
 });
 
-export const debugWindow = new PanelWindow('debug', 'Codex — Debug', {
+export const debugWindow = new PanelWindow('debug', 'SHARD — Debug', {
   width: 980,
   height: 720
 });

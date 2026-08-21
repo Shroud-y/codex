@@ -36,7 +36,7 @@ function SettingsPanel(): JSX.Element {
 
   return (
     <div className="panel">
-      <h1>Codex settings</h1>
+      <h1>SHARD settings</h1>
 
       <h2>General</h2>
       <section>

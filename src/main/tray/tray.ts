@@ -38,7 +38,7 @@ export class CodexTray {
   create(): void {
     const image = nativeImage.createFromPath(this.deps.iconPath);
     this.tray = new Tray(image.isEmpty() ? nativeImage.createEmpty() : image);
-    this.tray.setToolTip('Codex');
+    this.tray.setToolTip('SHARD');
     // Left click toggles mute (§11).
     this.tray.on('click', () => {
       this.deps.state.toggleMute();
@@ -56,7 +56,7 @@ export class CodexTray {
   refresh(): void {
     if (!this.tray) return;
     this.tray.setContextMenu(this.buildMenu());
-    this.tray.setToolTip(`Codex — ${this.statusLabel()}`);
+    this.tray.setToolTip(`SHARD — ${this.statusLabel()}`);
   }
 
   private statusLabel(): string {
@@ -76,7 +76,7 @@ export class CodexTray {
     const muted = state.isMuted;
 
     return Menu.buildFromTemplate([
-      { label: `Codex — ${this.statusLabel()}`, enabled: false },
+      { label: `SHARD — ${this.statusLabel()}`, enabled: false },
       { type: 'separator' },
       {
         label: muted ? 'Say something now (muted)' : 'Say something now',

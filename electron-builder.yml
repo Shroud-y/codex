@@ -1,5 +1,5 @@
 appId: dev.codex.companion
-productName: Codex
+productName: SHARD
 directories:
   buildResources: resources
   output: release
@@ -27,4 +27,4 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Codex
+  shortcutName: SHARD

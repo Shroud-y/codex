@@ -1,6 +1,6 @@
-<img src="resources/icons/app.png" width="96" height="96" alt="Codex app icon">
+<img src="resources/icons/app.png" width="96" height="96" alt="SHARD app icon">
 
-# Codex
+# SHARD
 
 [WIP] A desktop companion for Windows. It sits in the tray, watches what's
 happening on your machine, and occasionally pops up a small character near
@@ -26,8 +26,8 @@ over you.
 
 ## Install
 
-Grab the installer from `release/Codex Setup 0.1.0.exe` (built with
-`pnpm build`, see below) and run it. Codex starts with Windows and lives in
+Grab the installer from `release/SHARD Setup 0.1.0.exe` (built with
+`pnpm build`, see below) and run it. SHARD starts with Windows and lives in
 the tray — closing its windows never quits it, only **Quit** from the tray
 menu does.
 
@@ -54,7 +54,7 @@ From **Settings…**:
   frequency.
 - **Suppress on fullscreen / while a mic is active** — on by default, so a
   game or a call isn't interrupted.
-- **Watched processes** — one `.exe` name per line. Codex only reacts to
+- **Watched processes** — one `.exe` name per line. SHARD only reacts to
   processes on this list; add or remove freely.
 - **Watched folders** — one path per line, for the download-complete
   reaction. Restart to pick up changes.

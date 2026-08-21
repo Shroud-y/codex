@@ -95,7 +95,7 @@ async function bootstrap(): Promise<void> {
   } catch (err) {
     const message = err instanceof PhraseBankError ? err.message : String(err);
     log.error(message);
-    dialog.showErrorBox('Codex cannot start', message);
+    dialog.showErrorBox('SHARD cannot start', message);
     app.exit(1);
     return;
   }

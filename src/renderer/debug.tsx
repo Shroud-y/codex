@@ -34,7 +34,7 @@ function DebugPanel(): JSX.Element {
 
   return (
     <div className="panel">
-      <h1>Codex debug</h1>
+      <h1>SHARD debug</h1>
 
       <section>
         <div className="row">

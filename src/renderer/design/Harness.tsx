@@ -55,7 +55,7 @@ export default function Harness(): JSX.Element {
   return (
     <div className={styles.page}>
       <aside className={styles.panel}>
-        <h1 className={styles.title}>Codex · overlay preview</h1>
+        <h1 className={styles.title}>SHARD · overlay preview</h1>
 
         <Group label="State">
           {SCENES.map((s) => (
