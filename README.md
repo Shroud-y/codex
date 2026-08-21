@@ -15,6 +15,53 @@ low on space, locking/unlocking, waking up from sleep, the time of day, a
 download finishing — that kind of thing. It also knows when to shut up: quiet
 hours, fullscreen games, and while you're on a call, it won't interrupt.
 
+<details>
+<summary>Watched programs by default</summary>
+
+SHARD only reacts to processes on this list (add or remove your own anytime
+from **Settings… → Watched processes**):
+
+```
+Code.exe
+devenv.exe
+idea64.exe
+pycharm64.exe
+WebStorm64.exe
+rider64.exe
+chrome.exe
+firefox.exe
+msedge.exe
+Discord.exe
+Steam.exe
+EpicGamesLauncher.exe
+Battle.net.exe
+obs64.exe
+blender.exe
+photoshop.exe
+RiotClientServices.exe
+GalaxyClient.exe
+EADesktop.exe
+Spotify.exe
+Docker Desktop.exe
+ms-teams.exe
+Zoom.exe
+dota2.exe
+cs2.exe
+VALORANT-Win64-Shipping.exe
+LeagueClientUx.exe
+GTA5.exe
+Mindustry.exe
+FactoryGameSteam.exe
+CivilizationVI.exe
+Risk of Rain 2.exe
+Terraria.exe
+```
+
+Game launchers, well-known apps and specific games each get their own flavor
+of reaction — everything else on the list just gets a generic one.
+
+</details>
+
 ## Download
 
 Grab the latest build from the [Releases page](https://github.com/Shroud-y/codex/releases) —
