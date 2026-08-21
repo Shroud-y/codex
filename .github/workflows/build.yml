@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - name: Publish "Latest build" draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=latest-build
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            IS_DRAFT=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
+            if [ "$IS_DRAFT" = "true" ]; then
+              gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+            else
+              echo "Release '$TAG' was published (no longer a draft) - creating a fresh tag instead of touching it."
+              TAG="latest-build-$(git rev-parse --short HEAD)"
+            fi
+          fi
+          gh release create "$TAG" release/*.exe \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Latest build" \
+            --notes "Automated build from commit $GITHUB_SHA" \
+            --target "$GITHUB_SHA" \
+            --draft
