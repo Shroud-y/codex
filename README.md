@@ -6,7 +6,7 @@
 happening on your machine, and occasionally pops up a small character near
 the edge of the screen to say something about it.
 
-![Ordis speaking over the desktop](resources/screenshots/overlay.png)
+![Speaking over the desktop](resources/screenshots/overlay.gif)
 
 ## What it reacts to
 
