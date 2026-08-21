@@ -2,86 +2,69 @@
 
 # SHARD
 
-[WIP] A desktop companion for Windows. It sits in the tray, watches what's
-happening on your machine, and occasionally pops up a small character near
-the edge of the screen to say something about it.
+This is my hobby project. I got inspired by Ordis from Warframe and wanted
+something like him living on my own PC — a little companion that sits in the
+tray, notices what's going on with your machine, and pops up now and then to
+say something about it. Nothing serious, just wanted my desktop to feel a bit
+more alive.
 
 ![Speaking over the desktop](resources/screenshots/overlay.gif)
 
-## What it reacts to
+It reacts to stuff like games/apps opening and closing, your PC running hot or
+low on space, locking/unlocking, waking up from sleep, the time of day, a
+download finishing — that kind of thing. It also knows when to shut up: quiet
+hours, fullscreen games, and while you're on a call, it won't interrupt.
 
-- **Apps and games launching or closing** — Steam, your game clients, and a
-  growing list of specific games each get their own lines; anything else on
-  the watchlist gets a generic one.
-- **System state** — CPU/memory/temperature spikes, low disk, low battery.
-- **Your session** — lock/unlock, coming back from being idle, waking from
-  sleep.
-- **The clock** — morning/evening/night greetings, hourly check-ins, work
-  breaks, and a line when nothing has happened in a while.
-- **Files** — a download finishing, a build completing.
+## Download
 
-It goes quiet on its own during quiet hours, while a fullscreen app (like a
-game) is in front, or while your microphone is in a call — so it doesn't talk
-over you.
+Grab the latest build from the [Releases page](https://github.com/Shroud-y/codex/releases) —
+download the setup `.exe` and run it. It installs, starts with Windows, and
+lives in your tray from then on. Closing its windows doesn't quit it — right-click
+the tray icon and hit **Quit** if you actually want it gone.
 
-## Install
+## Build it yourself
 
-Grab the installer from `release/SHARD Setup 0.1.0.exe` (built with
-`pnpm build`, see below) and run it. SHARD starts with Windows and lives in
-the tray — closing its windows never quits it, only **Quit** from the tray
-menu does.
-
-## Using it
-
-Right-click the tray icon:
-
-| Item | Does |
-|---|---|
-| Say something now | Forces a line immediately, ignoring cooldowns and quiet-mode — good for checking it's alive |
-| Mute | Silences it completely until you unmute |
-| Snooze | 30 minutes, 2 hours, or until restart |
-| Frequency | Chatty / Balanced / Reserved / Rare — scales how often it speaks |
-| Settings… | Opens the settings window |
-| Quit | Actually exits |
-
-## Configuring
-
-From **Settings…**:
-
-- **Appearance** — switch the character, live, no restart.
-- **Frequency profile** — same four levels as the tray menu.
-- **Quiet hours** — a daily window where it stays silent regardless of
-  frequency.
-- **Suppress on fullscreen / while a mic is active** — on by default, so a
-  game or a call isn't interrupted.
-- **Watched processes** — one `.exe` name per line. SHARD only reacts to
-  processes on this list; add or remove freely.
-- **Watched folders** — one path per line, for the download-complete
-  reaction. Restart to pick up changes.
-
-## Development
+Want to build it from source instead? You'll need [Node.js](https://nodejs.org)
+and [pnpm](https://pnpm.io).
 
 ```sh
+git clone https://github.com/Shroud-y/codex.git
+cd codex
 pnpm install
-pnpm dev          # electron-vite dev
-pnpm design       # overlay design harness in a browser, no Electron
-pnpm typecheck    # tsc for the node and web projects
-pnpm lint
-pnpm test         # vitest, pure logic only
-pnpm start        # run the production build without packaging
-pnpm build        # typecheck + bundle + NSIS installer into release/
-pnpm icons        # regenerate resources/icons/*.ico
+pnpm build
 ```
 
-Run `pnpm design` before touching anything visual — it shows every character
-state over four backgrounds with the checks the design has to pass, with no
-Electron and no monitors running.
+That spits out an installer under `release/`. If you just want to run it
+without packaging anything:
 
-## Adding voice audio
+```sh
+pnpm dev
+```
 
-If you wish, you can drop `<phraseId>.ogg` files into `resources/audio/`. On the next launch the
-engine switches from text-only to playing them automatically — no setting,
-no code change, and a partially voiced bank just falls back to text per
-missing phrase. See `tools/render-voice/README.md` for the intended offline
-render pipeline. The overlay's own appear/disappear cues are separate — see
-`resources/audio/cues/README.md`.
+## Customizing the character
+
+You're not stuck with Ordis. Open the tray icon → **Settings…** → **Presets**.
+
+- **Add a new preset** with the button at the bottom — gives you a fresh
+  character you can rename and switch to anytime (the radio button next to it
+  picks which one is currently active).
+- Each preset lets you drop in your own files, no code or restart needed:
+  - **Phrase bank (.json)** — your own lines. Easiest way to start is copying
+    [`resources/phrases/bank.json`](resources/phrases/bank.json) and editing
+    the text — you only need to include the groups you actually want to
+    change.
+  - **Appear / disappear sound** — swap the little cue sounds it makes when it
+    shows up or leaves.
+  - **Appearance video (.webm/.mp4)** — replace how it looks. Use a video, not
+    a GIF — GIFs actually stutter here since the browser engine has to decode
+    them frame by frame instead of just playing them.
+- Hit **Reset to default** on any of those to go back to stock.
+
+Presets you build live under `%APPDATA%\codex\presets\<presetId>\`, so they
+survive updates and reinstalls.
+
+---
+
+Poking around the code and want the deeper technical write-up (architecture,
+Windows-specific plumbing, measured performance)? That's in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
