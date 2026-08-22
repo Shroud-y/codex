@@ -52,8 +52,8 @@ function SettingsPanel(): JSX.Element {
     <div className="panel">
       <h1>SHARD settings</h1>
 
-      <h2>General</h2>
-      <section>
+      <section className="box">
+        <h2>General</h2>
         <div className="row">
           <label>
             <input
@@ -86,8 +86,8 @@ function SettingsPanel(): JSX.Element {
 
       <PresetsSection settings={settings} patch={patch} />
 
-      <h2>Do not disturb</h2>
-      <section>
+      <section className="box">
+        <h2>Do not disturb</h2>
         <div className="row">
           <label>
             <input
@@ -144,8 +144,8 @@ function SettingsPanel(): JSX.Element {
         </div>
       </section>
 
-      <h2>Overlay</h2>
-      <section>
+      <section className="box">
+        <h2>Overlay</h2>
         <div className="row">
           <label>
             offset X
@@ -169,7 +169,7 @@ function SettingsPanel(): JSX.Element {
           </label>
         </div>
         <div className="row">
-          <label>
+          <label className="grow">
             Cue volume
             <input
               type="range"
@@ -208,8 +208,8 @@ function SettingsPanel(): JSX.Element {
         </div>
       </section>
 
-      <h2>Monitors</h2>
-      <section>
+      <section className="box">
+        <h2>Monitors</h2>
         {Object.keys(MONITOR_LABELS).map((id) => (
           <div className="row" key={id}>
             <label>
@@ -226,8 +226,8 @@ function SettingsPanel(): JSX.Element {
         ))}
       </section>
 
-      <h2>Watched processes</h2>
-      <section>
+      <section className="box">
+        <h2>Watched processes</h2>
         <textarea
           value={settings.watchedProcesses.join('\n')}
           onChange={(event) =>
@@ -242,8 +242,8 @@ function SettingsPanel(): JSX.Element {
         <div className="muted">One executable name per line.</div>
       </section>
 
-      <h2>Watched folders</h2>
-      <section>
+      <section className="box">
+        <h2>Watched folders</h2>
         <textarea
           value={settings.watchedFolders.join('\n')}
           onChange={(event) =>
@@ -334,17 +334,16 @@ function PresetsSection({
   };
 
   return (
-    <>
+    <section className="box">
       <h2>Presets</h2>
-      <section>
-        {settings.presets.map((preset: Preset) => {
-          const isBuiltin = preset.id === BUILTIN_PRESET_ID;
-          const isActive = preset.id === settings.activePresetId;
-          const presetStatus = status[preset.id];
-          const hasVideo = presetStatus?.hasVideo ?? false;
+      {settings.presets.map((preset: Preset) => {
+        const isBuiltin = preset.id === BUILTIN_PRESET_ID;
+        const isActive = preset.id === settings.activePresetId;
+        const presetStatus = status[preset.id];
+        const hasVideo = presetStatus?.hasVideo ?? false;
 
-          return (
-            <div className="row" key={preset.id} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        return (
+            <div className={`preset-box${isActive ? ' active' : ''}`} key={preset.id}>
               <div className="row">
                 <input
                   type="text"
@@ -402,17 +401,16 @@ function PresetsSection({
                   </div>
                 );
               })}
-            </div>
-          );
-        })}
+          </div>
+        );
+      })}
 
-        <div className="row">
-          <button type="button" onClick={addPreset}>
-            Add preset
-          </button>
-        </div>
-      </section>
-    </>
+      <div className="row">
+        <button type="button" onClick={addPreset}>
+          Add preset
+        </button>
+      </div>
+    </section>
   );
 }
 

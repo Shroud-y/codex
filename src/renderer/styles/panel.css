@@ -2,8 +2,20 @@
   color-scheme: dark;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
+  height: 100%;
   margin: 0;
+  overflow: hidden;
+}
+
+body {
   background: #0d1013;
   color: #cfe6f2;
   font-family: 'Segoe UI', system-ui, sans-serif;
@@ -37,6 +49,32 @@ section {
   border-radius: 8px;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.box {
+  border: none;
+  padding: 12px 14px 14px;
+  margin: 10px 0;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 10px;
+}
+
+.box:first-of-type {
+  margin-top: 0;
+}
+
+.box > h2:first-child {
+  margin-top: 0;
+}
+
+.preset-box {
+  padding: 10px 12px;
+  margin: 10px 0;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.preset-box.active {
+  background: rgba(127, 216, 255, 0.06);
 }
 
 table {
@@ -87,7 +125,7 @@ input[type='text'],
 input[type='number'] {
   background: #131a20;
   color: #cfe6f2;
-  border: 1px solid rgba(120, 220, 255, 0.24);
+  border: none;
   border-radius: 6px;
   padding: 5px 9px;
   font: inherit;
@@ -98,7 +136,7 @@ button {
 }
 
 button:hover {
-  border-color: rgba(120, 220, 255, 0.55);
+  background: #1b2630;
 }
 
 textarea {
@@ -106,11 +144,57 @@ textarea {
   min-height: 72px;
   background: #131a20;
   color: #cfe6f2;
-  border: 1px solid rgba(120, 220, 255, 0.24);
+  border: none;
   border-radius: 6px;
   padding: 6px 8px;
   font-family: 'Cascadia Mono', 'Consolas', monospace;
   font-size: 12px;
+  resize: none;
+}
+
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(120, 220, 255, 0.18);
+  outline: none;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #7fd8ff;
+  border: 2px solid #0d1013;
+  box-shadow: 0 0 4px rgba(127, 216, 255, 0.6);
+  cursor: pointer;
+}
+
+input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(120, 220, 255, 0.18);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #7fd8ff;
+  border: 2px solid #0d1013;
+  box-shadow: 0 0 4px rgba(127, 216, 255, 0.6);
+  cursor: pointer;
 }
 
 .urgent {

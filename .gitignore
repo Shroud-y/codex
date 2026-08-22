@@ -2,7 +2,9 @@ node_modules/
 out/
 dist/
 release/
+release-test*/
 *.log
+*.tsbuildinfo
 .DS_Store
 resources/probe/*.dll
 .claude/

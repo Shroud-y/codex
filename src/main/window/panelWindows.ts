@@ -30,6 +30,9 @@ class PanelWindow {
     const win = new BrowserWindow({
       width: this.size.width,
       height: this.size.height,
+      minWidth: 480,
+      minHeight: 420,
+      resizable: true,
       title: this.title,
       show: false,
       autoHideMenuBar: true,
